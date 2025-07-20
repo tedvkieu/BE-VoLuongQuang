@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import com.example.be_voluongquang.dto.request.UserRequestDTO;
 import com.example.be_voluongquang.dto.response.UserResponseDTO;
 import com.example.be_voluongquang.entity.UserEntity;
+import com.example.be_voluongquang.exception.ResourceNotFoundException;
+import com.example.be_voluongquang.exception.UserAlreadyExistsException;
 import com.example.be_voluongquang.mapper.UserMapper;
 import com.example.be_voluongquang.repository.UserRepository;
 import com.example.be_voluongquang.services.UserService;
@@ -35,12 +37,16 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponseDTO createAUser(UserRequestDTO userRequest) {
+        // Kiểm tra email đã tồn tại chưa
+        if (userRepository.existsByEmail(userRequest.getEmail())) {
+            throw new UserAlreadyExistsException(userRequest.getEmail());
+        }
+        
         String hashedPassword = passwordEncoder.encode(userRequest.getPassword());
         UserEntity user = UserEntity.builder()
                 .fullName(userRequest.getFullName())
                 .email(userRequest.getEmail())
-                .password(
-                        hashedPassword)
+                .password(hashedPassword)
                 .phone(userRequest.getPhone())
                 .address(userRequest.getAddress())
                 .role("CUSTOMER")

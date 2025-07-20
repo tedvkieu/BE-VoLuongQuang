@@ -1,0 +1,53 @@
+package com.example.be_voluongquang.repository;
+
+import com.example.be_voluongquang.entity.ProductGroupEntity;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface ProductGroupRepository extends JpaRepository<ProductGroupEntity, String> {
+    
+    /**
+     * Tìm product group theo tên
+     */
+    Optional<ProductGroupEntity> findByGroupName(String groupName);
+    
+    /**
+     * Tìm product group theo tên (case insensitive)
+     */
+    Optional<ProductGroupEntity> findByGroupNameIgnoreCase(String groupName);
+    
+    /**
+     * Tìm tất cả product group có chứa tên
+     */
+    List<ProductGroupEntity> findByGroupNameContainingIgnoreCase(String groupName);
+    
+    /**
+     * Tìm product group theo tên chính xác
+     */
+    @Query("SELECT pg FROM product_group pg WHERE pg.groupName = :groupName")
+    Optional<ProductGroupEntity> findProductGroupByName(@Param("groupName") String groupName);
+    
+    /**
+     * Đếm số lượng product của mỗi product group
+     */
+    @Query("SELECT pg.groupName, COUNT(p) FROM product_group pg LEFT JOIN pg.products p GROUP BY pg.groupName")
+    List<Object[]> countProductsByGroup();
+    
+    /**
+     * Tìm product group có nhiều product nhất
+     */
+    @Query("SELECT pg FROM product_group pg WHERE SIZE(pg.products) = (SELECT MAX(SIZE(pg2.products)) FROM product_group pg2)")
+    List<ProductGroupEntity> findProductGroupsWithMostProducts();
+    
+    /**
+     * Tìm product group có product active
+     */
+    @Query("SELECT DISTINCT pg FROM product_group pg JOIN pg.products p WHERE p.isActive = true")
+    List<ProductGroupEntity> findProductGroupsWithActiveProducts();
+} 

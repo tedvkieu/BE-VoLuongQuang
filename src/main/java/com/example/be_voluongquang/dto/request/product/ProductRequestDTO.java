@@ -1,15 +1,10 @@
-package com.example.be_voluongquang.dto.response;
+package com.example.be_voluongquang.dto.request.product;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class ProductResponseDTO {
+public class ProductRequestDTO {
+
     private String productId;
     private String name;
     private Double price;
@@ -23,8 +18,7 @@ public class ProductResponseDTO {
     private Boolean isActive;
     private String imageUrl;
     private String description;
-    private String productGroupId;
-    private String categoryId;
     private String brandId;
+    private String categoryId;
+    private String productGroupId;
 }
-

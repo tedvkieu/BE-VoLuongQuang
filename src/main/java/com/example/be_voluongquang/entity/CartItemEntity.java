@@ -3,12 +3,15 @@ package com.example.be_voluongquang.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.io.Serializable;
+
 @Entity(name = "cart_items")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@IdClass(CartItemEntity.CartItemId.class)
 public class CartItemEntity extends BaseEntity {
     @Id
     @Column(name = "cart_id")
@@ -28,4 +31,13 @@ public class CartItemEntity extends BaseEntity {
 
     @Column(name = "quantity")
     private Integer quantity;
+
+    // Composite Key Class
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CartItemId implements Serializable {
+        private Integer cartId;
+        private String productId;
+    }
 }

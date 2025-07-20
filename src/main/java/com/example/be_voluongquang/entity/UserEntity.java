@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToOne;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -40,4 +41,7 @@ public class UserEntity extends BaseEntity {
 
     @Column(name = "role")
     private String role;
+    
+    @OneToOne(mappedBy = "user")
+    private CartEntity cart;
 }

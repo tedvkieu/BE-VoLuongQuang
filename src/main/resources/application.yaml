@@ -1,0 +1,18 @@
+spring:
+    application:
+        name: be-voluongquang
+    datasource:
+        url: ${DB_URL:jdbc:postgresql://localhost:5432/voluongquang}
+        username: ${DB_USERNAME:postgres}
+        password: ${DB_PASSWORD:123456}
+    jpa:
+        database-platform: org.hibernate.dialect.PostgreSQLDialect
+        hibernate:
+            ddl-auto: none
+        # show-sql: true
+
+    liquibase:
+        change-log: classpath:db/changelog/master-changelog.xml
+        enabled: true
+    autoconfigure:
+        exclude: org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration

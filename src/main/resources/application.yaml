@@ -16,3 +16,7 @@ spring:
         enabled: true
     autoconfigure:
         exclude: org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+    servlet:
+        multipart:
+            max-file-size: 10MB
+            max-request-size: 20MB

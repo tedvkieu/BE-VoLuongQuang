@@ -5,10 +5,12 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
@@ -35,10 +37,10 @@ public class ProductController {
     // GET MAPPING API ----------------------------------------------------------
 
     @GetMapping
-    public ResponseEntity<List<ProductResponseDTO>> getAllProduct(){
+    public ResponseEntity<List<ProductResponseDTO>> getAllProduct() {
         return ResponseEntity.ok(productService.getAllProduct());
     }
-    
+
     @GetMapping("/featured")
     public ResponseEntity<List<ProductResponseDTO>> getFeaturedProducts() {
         return ResponseEntity.ok(productService.getFeaturedProducts());
@@ -59,12 +61,11 @@ public class ProductController {
         return productGroupService.getAllProductGroups();
     }
 
-
     // POST MAPPING API ----------------------------------------------------------
     @PostMapping
     public ResponseEntity<?> createAProduct(
-        @RequestPart(value = "images", required = false) MultipartFile[] images, 
-        @RequestPart(value = "product") ProductRequestDTO product){
+            @RequestPart(value = "images", required = false) MultipartFile[] images,
+            @RequestPart(value = "product") ProductRequestDTO product) {
 
         System.out.println("checck imageS: " + images);
         System.out.println("check product: " + product);
@@ -73,16 +74,31 @@ public class ProductController {
         return ResponseEntity.ok(savedProduct);
     }
 
-
     // PUT MAPPING API ----------------------------------------------------------
-    @PutMapping(path = "/{id}",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping(path = "/{id}")
     public ResponseEntity<?> updateAProduct(
-        @PathVariable String id,
-        @RequestPart(value = "images", required = false) MultipartFile[] images, 
-        @RequestPart(value = "product") ProductRequestDTO product){
+            @PathVariable String id,
+            @RequestPart(value = "images", required = false) MultipartFile[] images,
+            @RequestPart(value = "product") ProductRequestDTO product) {
 
+        System.out.println("checck imageS: " + images);
+        System.out.println("check product: " + product);
         ProductResponseDTO savedProduct = productService.updateAProduct(id, images, product);
         return ResponseEntity.ok(savedProduct);
+    }
+
+    // DELETE MAPPING API
+    // ----T------------------------------------------------------
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteAProduct(@PathVariable String id) {
+        productService.deleteAProduct(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/batch")
+    public ResponseEntity<Void> deleteMultipleProducts(@RequestBody List<String> ids) {
+        productService.deleteMultipleProducts(ids);
+        return ResponseEntity.noContent().build();
     }
 
 }

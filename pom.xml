@@ -72,12 +72,32 @@
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-crypto</artifactId>
 		</dependency>
-		 <dependency>
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-devtools</artifactId>
-			<scope>runtime</scope> <!-- Đảm bảo chỉ hoạt động khi develop -->
-			<optional>true</optional> <!-- Không export khi build jar -->
+			<scope>runtime</scope>
+			<!-- Đảm bảo chỉ hoạt động khi develop -->
+			<optional>true</optional>
+			<!-- Không export khi build jar -->
 		</dependency>
+		<dependency>
+			<groupId>com.opencsv</groupId>
+			<artifactId>opencsv</artifactId>
+			<version>5.7.1</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.poi/poi -->
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi</artifactId>
+			<version>5.2.3</version> <!-- hoặc phiên bản mới hơn -->
+		</dependency>
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-ooxml</artifactId>
+			<version>5.2.3</version>
+		</dependency>
+
+
 	</dependencies>
 	<build>
 		<plugins>

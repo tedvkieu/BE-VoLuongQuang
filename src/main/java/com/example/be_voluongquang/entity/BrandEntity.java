@@ -29,4 +29,8 @@ public class BrandEntity extends BaseEntity {
 
     @OneToMany(mappedBy = "brand", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductEntity> products = new ArrayList<>();
+
+    public BrandEntity(String brandId) {
+        this.brandId = brandId;
+    }
 }

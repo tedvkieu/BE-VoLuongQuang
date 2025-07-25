@@ -18,7 +18,7 @@ COPY product(
     created_at,
     updated_at
 )
-FROM 'D:/Project/My-Project/voluongquang/be-voluongquang/src/main/resources/db/scripts/data/product.csv'
+FROM 'src\main\resources\db\scripts\data\product.csv'
 DELIMITER ','
 CSV HEADER
 ENCODING 'UTF8';

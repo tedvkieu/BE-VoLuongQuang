@@ -1,10 +1,28 @@
 package com.example.be_voluongquang.services.impl;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import lombok.extern.slf4j.Slf4j;
+
+import com.example.be_voluongquang.dto.request.product.ImportErrorDTO;
+import com.example.be_voluongquang.dto.request.product.ProductImportRequestDTO;
 import com.example.be_voluongquang.dto.request.product.ProductRequestDTO;
 import com.example.be_voluongquang.dto.response.product.ProductResponseDTO;
 import com.example.be_voluongquang.entity.BrandEntity;
@@ -20,7 +38,11 @@ import com.example.be_voluongquang.repository.ProductGroupRepository;
 import com.example.be_voluongquang.repository.ProductRepository;
 import com.example.be_voluongquang.services.ProductService;
 import com.example.be_voluongquang.services.app.UploadImgImgService;
+import com.example.be_voluongquang.utils.CsvParserUtils;
 import com.example.be_voluongquang.utils.ImageNamingUtil;
+import com.opencsv.CSVReader;
+import com.opencsv.CSVReaderBuilder;
+import com.opencsv.exceptions.CsvException;
 
 import jakarta.transaction.Transactional;
 
@@ -166,15 +188,71 @@ public class ProductServiceImpl implements ProductService {
         return productMapper.toDTO(product);
     }
 
+    @Override
+    public Map<String, Object> importProductsFromCsv(MultipartFile file) {
+        List<ProductEntity> products = new ArrayList<>();
+        List<ImportErrorDTO> errorList = new ArrayList<>();
+        List<ProductResponseDTO> successList = new ArrayList<>();
+
+        String filename = file.getOriginalFilename();
+        if (filename == null ||
+            !(filename.toLowerCase().endsWith(".csv") || filename.toLowerCase().endsWith(".xlsx"))) {
+            throw new IllegalArgumentException("Chỉ chấp nhận file .csv hoặc .xlsx");
+        }
+
+        try {
+            if (filename.toLowerCase().endsWith(".csv")) {
+                // Đọc file CSV như cũ
+                try (Reader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
+                    CSVReader csvReader = new CSVReaderBuilder(reader).withSkipLines(1).build();
+                    List<String[]> rows = csvReader.readAll();
+
+                    for (String[] row : rows) {
+                        processRow(row, products, errorList);
+                    }
+                }
+            } else if (filename.toLowerCase().endsWith(".xlsx")) {
+                // Đọc file Excel
+                try (InputStream is = file.getInputStream()) {
+                    Workbook workbook = new XSSFWorkbook(is);
+                    Sheet sheet = workbook.getSheetAt(0);
+                    boolean isFirstRow = true;
+                    for (org.apache.poi.ss.usermodel.Row excelRow : sheet) {
+                        if (isFirstRow) { isFirstRow = false; continue; } // Bỏ qua header
+                        String[] row = new String[16];
+                        for (int i = 0; i < 16; i++) {
+                            org.apache.poi.ss.usermodel.Cell cell = excelRow.getCell(i);
+                            row[i] = (cell == null) ? null : getCellStringValue(cell);
+                        }
+                        processRow(row, products, errorList);
+                    }
+                    workbook.close();
+                }
+            }
+            // Lưu các bản ghi hợp lệ
+            List<ProductEntity> savedProducts = productRepository.saveAll(products);
+            // Chuyển sang DTO để trả về FE
+            for (ProductEntity entity : savedProducts) {
+                successList.add(productMapper.toDTO(entity));
+            }
+        } catch (IOException | CsvException e) {
+            errorList.add(ImportErrorDTO.builder()
+                    .productId("N/A")
+                    .errorMessage("File read error: " + e.getMessage())
+                    .build());
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", successList);
+        result.put("errors", errorList);
+        return result;
+    }
+
     // Service Impl for PUT Method -----------------------------------------
 
     @Override
     public ProductResponseDTO updateAProduct(String id, MultipartFile[] images, ProductRequestDTO dto) {
 
-        log.info("=== DEBUG: Starting updateAProduct ===");
-        log.info("Product ID: {}", id);
-        log.info("Product DTO: {}", dto);
-        log.info("Images array: {}", images);
 
         if (images != null) {
             log.info("Number of images received: {}", images.length);
@@ -310,5 +388,72 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public void deleteMultipleProducts(List<String> ids) {
         ids.forEach(this::deleteAProduct);
+    }
+
+    // Hàm xử lý từng dòng (dùng chung cho cả csv và xlsx)
+    private void processRow(String[] row, List<ProductEntity> products, List<ImportErrorDTO> errorList) {
+        String productId = row[0];
+        // Kiểm tra trùng trong DB
+        boolean existsInDb = productRepository.existsById(productId);
+        // Kiểm tra trùng trong danh sách tạm (các dòng đã duyệt trong file)
+        boolean existsInBatch = products.stream().anyMatch(p -> p.getProductId().equals(productId));
+        if (existsInDb || existsInBatch) {
+            errorList.add(ImportErrorDTO.builder()
+                    .productId(productId)
+                    .errorMessage("Product already exists")
+                    .build());
+            return;
+        }
+        try {
+            ProductEntity product = new ProductEntity();
+            product.setProductId(productId);
+            product.setName(row[1]);
+            // Kiểm tra null cho các trường id
+            product.setProductGroup(
+                (row[2] == null || row[2].trim().isEmpty()) ? null : productGroupRepository.findById(row[2]).orElse(null)
+            );
+            product.setCategory(
+                (row[3] == null || row[3].trim().isEmpty()) ? null : categoryRepository.findById(row[3]).orElse(null)
+            );
+            product.setBrand(
+                (row[4] == null || row[4].trim().isEmpty()) ? null : brandRepository.findById(row[4]).orElse(null)
+            );
+            product.setPrice(CsvParserUtils.parseDouble(row[5]));
+            product.setCostPrice(CsvParserUtils.parseDouble(row[6]));
+            product.setWholesalePrice(CsvParserUtils.parseDouble(row[7]));
+            product.setDiscountPercent(CsvParserUtils.parseInteger(row[8]));
+            product.setStockQuantity(CsvParserUtils.parseInteger(row[9]));
+            product.setWeight(CsvParserUtils.parseDouble(row[10]));
+            product.setUnit(row[11]);
+            product.setIsFeatured(CsvParserUtils.parseBoolean(row[12]));
+            product.setIsActive(CsvParserUtils.parseBoolean(row[13]));
+            product.setImageUrl(row[14]);
+            product.setDescription(row[15]);
+            // Parse create_at và update_at nếu entity có các trường này
+            if (row.length > 16 && row[16] != null && !row[16].isEmpty()) {
+                product.setCreatedAt(LocalDateTime.parse(row[16]));
+            }
+            if (row.length > 17 && row[17] != null && !row[17].isEmpty()) {
+                product.setUpdatedAt(LocalDateTime.parse(row[17]));
+            }
+            products.add(product);
+        } catch (Exception e) {
+            errorList.add(ImportErrorDTO.builder()
+                    .productId(productId)
+                    .errorMessage("Parsing error: " + e.getMessage())
+                    .build());
+        }
+    }
+
+    // Hàm chuyển cell Excel về String
+    private String getCellStringValue(org.apache.poi.ss.usermodel.Cell cell) {
+        switch (cell.getCellType()) {
+            case STRING: return cell.getStringCellValue();
+            case NUMERIC: return String.valueOf(cell.getNumericCellValue());
+            case BOOLEAN: return String.valueOf(cell.getBooleanCellValue());
+            case FORMULA: return cell.getCellFormula();
+            case BLANK: return "";
+            default: return "";
+        }
     }
 }

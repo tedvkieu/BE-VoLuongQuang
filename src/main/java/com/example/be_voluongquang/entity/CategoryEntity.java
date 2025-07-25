@@ -28,4 +28,8 @@ public class CategoryEntity extends BaseEntity {
 
     @OneToMany(mappedBy = "category")
     private List<ProductEntity> products = new ArrayList<>();
-} 
+
+    public CategoryEntity(String categoryId) {
+        this.categoryId = categoryId;
+    }
+}

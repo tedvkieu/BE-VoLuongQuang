@@ -28,4 +28,8 @@ public class ProductGroupEntity extends BaseEntity {
 
     @OneToMany(mappedBy = "productGroup")
     private List<ProductEntity> products = new ArrayList<>();
-} 
+
+    public ProductGroupEntity(String groupId) {
+        this.groupId = groupId;
+    }
+}

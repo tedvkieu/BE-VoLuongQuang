@@ -1,8 +1,16 @@
 package com.example.be_voluongquang.controller;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -12,9 +20,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+
+import com.example.be_voluongquang.dto.request.product.ImportErrorDTO;
 import com.example.be_voluongquang.dto.request.product.ProductRequestDTO;
 import com.example.be_voluongquang.dto.response.BrandSimpleDTO;
 import com.example.be_voluongquang.dto.response.ProductGroupSimpleDTO;
@@ -72,6 +83,13 @@ public class ProductController {
 
         ProductResponseDTO savedProduct = productService.createAProduct(images, product);
         return ResponseEntity.ok(savedProduct);
+    }
+
+    @PostMapping("/import")
+    public ResponseEntity<?> importCsv(@RequestParam("file") MultipartFile file) throws IOException {
+        // Gọi service trả về Map<String, Object> gồm success và errors
+        Map<String, Object> result = productService.importProductsFromCsv(file);
+        return ResponseEntity.ok(result);
     }
 
     // PUT MAPPING API ----------------------------------------------------------

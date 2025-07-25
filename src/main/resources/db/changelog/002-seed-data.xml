@@ -5,7 +5,7 @@
 	<changeSet id="001-insert-sample-data" author="author-kieu">
 		<sqlFile path="../scripts/data/data-insert.sql" relativeToChangelogFile="true"/>
 	</changeSet>
-	<changeSet id="002-import-product" author="kieu">
+	<!-- <changeSet id="002-import-product" author="kieu">
 		<sqlFile path="../scripts/data/import-xlxs-product.sql" relativeToChangelogFile="true"/>
-	</changeSet>
+	</changeSet> -->
 </databaseChangeLog>

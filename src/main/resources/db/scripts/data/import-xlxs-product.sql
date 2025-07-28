@@ -14,6 +14,7 @@ COPY product(
     is_featured,
     is_active,
     image_url,
+    link,
     description,
     created_at,
     updated_at

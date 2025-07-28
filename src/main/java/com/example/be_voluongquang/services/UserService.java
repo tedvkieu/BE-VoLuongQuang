@@ -12,4 +12,8 @@ public interface UserService {
 
     public UserResponseDTO createAUser(UserRequestDTO user);
 
+    public UserResponseDTO updateAUser(String id, UserRequestDTO userRequestDTO);
+
+    public void deleteAUser(String id);
+
 }

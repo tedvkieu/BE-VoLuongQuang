@@ -16,7 +16,8 @@ public class ProductMapper extends BaseMapper<ProductEntity, ProductResponseDTO>
     }
 
     public ProductResponseDTO toDTO(ProductEntity entity) {
-        if (entity == null) return null;
+        if (entity == null)
+            return null;
         return ProductResponseDTO.builder()
                 .productId(entity.getProductId())
                 .name(entity.getName())
@@ -31,6 +32,7 @@ public class ProductMapper extends BaseMapper<ProductEntity, ProductResponseDTO>
                 .isActive(entity.getIsActive())
                 .imageUrl(entity.getImageUrl())
                 .description(entity.getDescription())
+                .link(entity.getLink())
                 .brandId(entity.getBrand() != null ? entity.getBrand().getBrandId() : null)
                 .categoryId(entity.getCategory() != null ? entity.getCategory().getCategoryId() : null)
                 .productGroupId(entity.getProductGroup() != null ? entity.getProductGroup().getGroupId() : null)
@@ -38,10 +40,10 @@ public class ProductMapper extends BaseMapper<ProductEntity, ProductResponseDTO>
     }
 
     public static ProductEntity toEntity(ProductRequestDTO dto,
-                                         BrandEntity brand,
-                                         CategoryEntity category,
-                                         ProductGroupEntity productGroup,
-                                         String imageUrl) {
+            BrandEntity brand,
+            CategoryEntity category,
+            ProductGroupEntity productGroup,
+            String imageUrl) {
 
         return ProductEntity.builder()
                 .productId(dto.getProductId())
@@ -57,6 +59,7 @@ public class ProductMapper extends BaseMapper<ProductEntity, ProductResponseDTO>
                 .isActive(dto.getIsActive())
                 .description(dto.getDescription())
                 .imageUrl(imageUrl)
+                .link(dto.getLink())
                 .brand(brand)
                 .category(category)
                 .productGroup(productGroup)

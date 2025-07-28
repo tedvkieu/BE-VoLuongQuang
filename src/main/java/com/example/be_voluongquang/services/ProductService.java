@@ -1,12 +1,8 @@
 package com.example.be_voluongquang.services;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-
 import org.springframework.web.multipart.MultipartFile;
-
-import com.example.be_voluongquang.dto.request.product.ImportErrorDTO;
 import com.example.be_voluongquang.dto.request.product.ProductRequestDTO;
 import com.example.be_voluongquang.dto.response.product.ProductResponseDTO;
 

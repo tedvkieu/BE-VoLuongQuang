@@ -5,24 +5,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import lombok.extern.slf4j.Slf4j;
-
 import com.example.be_voluongquang.dto.request.product.ImportErrorDTO;
-import com.example.be_voluongquang.dto.request.product.ProductImportRequestDTO;
 import com.example.be_voluongquang.dto.request.product.ProductRequestDTO;
 import com.example.be_voluongquang.dto.response.product.ProductResponseDTO;
 import com.example.be_voluongquang.entity.BrandEntity;
@@ -43,7 +38,6 @@ import com.example.be_voluongquang.utils.ImageNamingUtil;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
 import com.opencsv.exceptions.CsvException;
-
 import jakarta.transaction.Transactional;
 
 @Slf4j
@@ -196,7 +190,7 @@ public class ProductServiceImpl implements ProductService {
 
         String filename = file.getOriginalFilename();
         if (filename == null ||
-            !(filename.toLowerCase().endsWith(".csv") || filename.toLowerCase().endsWith(".xlsx"))) {
+                !(filename.toLowerCase().endsWith(".csv") || filename.toLowerCase().endsWith(".xlsx"))) {
             throw new IllegalArgumentException("Chỉ chấp nhận file .csv hoặc .xlsx");
         }
 
@@ -218,7 +212,10 @@ public class ProductServiceImpl implements ProductService {
                     Sheet sheet = workbook.getSheetAt(0);
                     boolean isFirstRow = true;
                     for (org.apache.poi.ss.usermodel.Row excelRow : sheet) {
-                        if (isFirstRow) { isFirstRow = false; continue; } // Bỏ qua header
+                        if (isFirstRow) {
+                            isFirstRow = false;
+                            continue;
+                        } // Bỏ qua header
                         String[] row = new String[16];
                         for (int i = 0; i < 16; i++) {
                             org.apache.poi.ss.usermodel.Cell cell = excelRow.getCell(i);
@@ -252,7 +249,6 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public ProductResponseDTO updateAProduct(String id, MultipartFile[] images, ProductRequestDTO dto) {
-
 
         if (images != null) {
             log.info("Number of images received: {}", images.length);
@@ -410,14 +406,13 @@ public class ProductServiceImpl implements ProductService {
             product.setName(row[1]);
             // Kiểm tra null cho các trường id
             product.setProductGroup(
-                (row[2] == null || row[2].trim().isEmpty()) ? null : productGroupRepository.findById(row[2]).orElse(null)
-            );
+                    (row[2] == null || row[2].trim().isEmpty()) ? null
+                            : productGroupRepository.findById(row[2]).orElse(null));
             product.setCategory(
-                (row[3] == null || row[3].trim().isEmpty()) ? null : categoryRepository.findById(row[3]).orElse(null)
-            );
+                    (row[3] == null || row[3].trim().isEmpty()) ? null
+                            : categoryRepository.findById(row[3]).orElse(null));
             product.setBrand(
-                (row[4] == null || row[4].trim().isEmpty()) ? null : brandRepository.findById(row[4]).orElse(null)
-            );
+                    (row[4] == null || row[4].trim().isEmpty()) ? null : brandRepository.findById(row[4]).orElse(null));
             product.setPrice(CsvParserUtils.parseDouble(row[5]));
             product.setCostPrice(CsvParserUtils.parseDouble(row[6]));
             product.setWholesalePrice(CsvParserUtils.parseDouble(row[7]));
@@ -429,12 +424,13 @@ public class ProductServiceImpl implements ProductService {
             product.setIsActive(CsvParserUtils.parseBoolean(row[13]));
             product.setImageUrl(row[14]);
             product.setDescription(row[15]);
+            product.setDescription(row[16]);
             // Parse create_at và update_at nếu entity có các trường này
-            if (row.length > 16 && row[16] != null && !row[16].isEmpty()) {
-                product.setCreatedAt(LocalDateTime.parse(row[16]));
-            }
             if (row.length > 17 && row[17] != null && !row[17].isEmpty()) {
-                product.setUpdatedAt(LocalDateTime.parse(row[17]));
+                product.setCreatedAt(LocalDateTime.parse(row[17]));
+            }
+            if (row.length > 18 && row[18] != null && !row[18].isEmpty()) {
+                product.setUpdatedAt(LocalDateTime.parse(row[18]));
             }
             products.add(product);
         } catch (Exception e) {
@@ -448,12 +444,18 @@ public class ProductServiceImpl implements ProductService {
     // Hàm chuyển cell Excel về String
     private String getCellStringValue(org.apache.poi.ss.usermodel.Cell cell) {
         switch (cell.getCellType()) {
-            case STRING: return cell.getStringCellValue();
-            case NUMERIC: return String.valueOf(cell.getNumericCellValue());
-            case BOOLEAN: return String.valueOf(cell.getBooleanCellValue());
-            case FORMULA: return cell.getCellFormula();
-            case BLANK: return "";
-            default: return "";
+            case STRING:
+                return cell.getStringCellValue();
+            case NUMERIC:
+                return String.valueOf(cell.getNumericCellValue());
+            case BOOLEAN:
+                return String.valueOf(cell.getBooleanCellValue());
+            case FORMULA:
+                return cell.getCellFormula();
+            case BLANK:
+                return "";
+            default:
+                return "";
         }
     }
 }

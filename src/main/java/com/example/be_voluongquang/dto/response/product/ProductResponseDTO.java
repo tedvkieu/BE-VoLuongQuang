@@ -23,8 +23,8 @@ public class ProductResponseDTO {
     private Boolean isActive;
     private String imageUrl;
     private String description;
+    private String link;
     private String productGroupId;
     private String categoryId;
     private String brandId;
 }
-

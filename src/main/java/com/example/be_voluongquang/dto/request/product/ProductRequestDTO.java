@@ -18,6 +18,7 @@ public class ProductRequestDTO {
     private Boolean isActive;
     private String imageUrl;
     private String description;
+    private String link;
     private String brandId;
     private String categoryId;
     private String productGroupId;

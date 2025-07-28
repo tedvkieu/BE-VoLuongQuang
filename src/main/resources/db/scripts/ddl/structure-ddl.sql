@@ -16,6 +16,7 @@ CREATE TABLE product (
     is_active BOOLEAN DEFAULT TRUE,
     image_url TEXT,
     description TEXT,
+    link TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

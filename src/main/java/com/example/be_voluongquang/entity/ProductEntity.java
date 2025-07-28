@@ -58,6 +58,9 @@ public class ProductEntity extends BaseEntity {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "link", columnDefinition = "TEXT")
+    private String link;
+
     @ManyToOne
     @JoinColumn(name = "brand_id")
     private BrandEntity brand;

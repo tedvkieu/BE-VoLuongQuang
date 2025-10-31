@@ -15,6 +15,9 @@ CREATE TABLE product (
     is_featured BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
     image_url TEXT,
+    url_shopee TEXT,
+    url_lazada TEXT,
+    url_other TEXT,
     description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

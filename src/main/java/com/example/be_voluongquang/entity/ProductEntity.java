@@ -55,6 +55,15 @@ public class ProductEntity extends BaseEntity {
     @Column(name = "image_url")
     private String imageUrl;
 
+    @Column(name = "url_shopee")
+    private String urlShopee;
+
+    @Column(name = "url_lazada")
+    private String urlLazada;
+
+    @Column(name = "url_other")
+    private String urlOther;
+
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 

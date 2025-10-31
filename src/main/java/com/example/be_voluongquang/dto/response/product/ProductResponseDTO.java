@@ -22,9 +22,11 @@ public class ProductResponseDTO {
     private Boolean isFeatured;
     private Boolean isActive;
     private String imageUrl;
+    private String urlShopee;
+    private String urlLazada;
+    private String urlOther;
     private String description;
     private String productGroupId;
     private String categoryId;
     private String brandId;
 }
-

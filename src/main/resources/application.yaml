@@ -25,3 +25,9 @@ spring:
         multipart:
             max-file-size: 10MB
             max-request-size: 20MB
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:dev-secret-change-me-please-32-bytes-minimum}
+    access-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:86400000} # 1 day
+    refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:1209600000} # 14 days

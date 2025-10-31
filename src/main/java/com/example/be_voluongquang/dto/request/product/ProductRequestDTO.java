@@ -17,6 +17,9 @@ public class ProductRequestDTO {
     private Boolean isFeatured;
     private Boolean isActive;
     private String imageUrl;
+    private String urlShopee;
+    private String urlLazada;
+    private String urlOther;
     private String description;
     private String brandId;
     private String categoryId;

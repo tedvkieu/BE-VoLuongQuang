@@ -162,6 +162,19 @@ public interface ProductRepository extends JpaRepository<ProductEntity, String> 
      */
     @Query("SELECT p FROM product p WHERE p.name LIKE %:searchTerm% OR p.description LIKE %:searchTerm%")
     Page<ProductEntity> findByNameOrDescriptionContaining(@Param("searchTerm") String searchTerm, Pageable pageable);
+
+    /**
+     * Tìm product có discount với pagination và hỗ trợ tìm kiếm theo id hoặc tên
+     */
+    @Query("SELECT p FROM product p " +
+            "WHERE p.discountPercent > :minDiscount " +
+            "AND ( :searchTerm IS NULL " +
+            "       OR LOWER(p.productId) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+            "       OR LOWER(p.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+            "       OR LOWER(p.description) LIKE LOWER(CONCAT('%', :searchTerm, '%')) )")
+    Page<ProductEntity> searchDiscountedProducts(@Param("minDiscount") Integer minDiscount,
+            @Param("searchTerm") String searchTerm,
+            Pageable pageable);
     
     /**
      * Đếm số lượng product theo brand

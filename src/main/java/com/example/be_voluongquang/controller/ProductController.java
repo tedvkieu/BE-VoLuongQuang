@@ -1,16 +1,10 @@
 package com.example.be_voluongquang.controller;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -24,8 +18,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-
-import com.example.be_voluongquang.dto.request.product.ImportErrorDTO;
 import com.example.be_voluongquang.dto.request.product.ProductRequestDTO;
 import com.example.be_voluongquang.dto.response.BrandSimpleDTO;
 import com.example.be_voluongquang.dto.response.ProductGroupSimpleDTO;
@@ -33,6 +25,7 @@ import com.example.be_voluongquang.dto.response.product.ProductResponseDTO;
 import com.example.be_voluongquang.services.BrandService;
 import com.example.be_voluongquang.services.ProductGroupService;
 import com.example.be_voluongquang.services.ProductService;
+import org.springframework.data.domain.Page;
 
 @RestController
 @RequestMapping(path = "/api/product", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -48,8 +41,19 @@ public class ProductController {
     // GET MAPPING API ----------------------------------------------------------
 
     @GetMapping
-    public ResponseEntity<List<ProductResponseDTO>> getAllProduct() {
-        return ResponseEntity.ok(productService.getAllProduct());
+    public ResponseEntity<?> getProducts(
+            @RequestParam(name = "page", required = false, defaultValue = "0") Integer page,
+            @RequestParam(name = "size", required = false, defaultValue = "15") Integer size,
+            @RequestParam(name = "search", required = false) String search) {
+
+        System.out.println("product pages called");
+        // Trả về phân trang (Page) theo ngày tạo mới nhất; hỗ trợ tìm kiếm
+        return ResponseEntity.ok(productService.getProductsPaged(page, size, search));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ProductResponseDTO> getProductById(@PathVariable String id) {
+        return ResponseEntity.ok(productService.getProductById(id));
     }
 
     @GetMapping("/featured")
@@ -60,6 +64,14 @@ public class ProductController {
     @GetMapping("/discount")
     public ResponseEntity<List<ProductResponseDTO>> getAllProductsDiscount() {
         return ResponseEntity.ok(productService.getAllProductsDiscount());
+    }
+
+    @GetMapping("/discount-manage")
+    public ResponseEntity<Page<ProductResponseDTO>> getDiscountProductsManage(
+            @RequestParam(name = "page", required = false, defaultValue = "0") Integer page,
+            @RequestParam(name = "size", required = false, defaultValue = "15") Integer size,
+            @RequestParam(name = "search", required = false) String search) {
+        return ResponseEntity.ok(productService.getDiscountProductsPaged(page, size, search));
     }
 
     @GetMapping("/brands")

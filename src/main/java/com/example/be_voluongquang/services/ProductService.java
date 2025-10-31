@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.example.be_voluongquang.dto.request.product.ImportErrorDTO;
 import com.example.be_voluongquang.dto.request.product.ProductRequestDTO;
 import com.example.be_voluongquang.dto.response.product.ProductResponseDTO;
+import org.springframework.data.domain.Page;
 
 public interface ProductService {
 
@@ -18,6 +19,19 @@ public interface ProductService {
     List<ProductResponseDTO> getAllProductsDiscount();
 
     List<ProductResponseDTO> getAllProduct();
+
+    ProductResponseDTO getProductById(String id);
+
+    /**
+     * Lấy danh sách product theo trang, sắp xếp mới nhất theo createdAt DESC.
+     * Hỗ trợ tìm kiếm theo tên/mô tả qua tham số search (tùy chọn).
+     */
+    Page<ProductResponseDTO> getProductsPaged(int page, int size, String search);
+
+    /**
+     * Lấy danh sách product có discount theo trang và hỗ trợ tìm kiếm.
+     */
+    Page<ProductResponseDTO> getDiscountProductsPaged(int page, int size, String search);
 
     // Service for POST method ----------------------------------
     ProductResponseDTO createAProduct(MultipartFile[] images, ProductRequestDTO product);

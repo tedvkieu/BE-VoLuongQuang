@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import com.example.be_voluongquang.dto.request.product.ProductRequestDTO;
+import com.example.be_voluongquang.dto.request.product.ProductSearchRequest;
 import com.example.be_voluongquang.dto.response.BrandSimpleDTO;
 import com.example.be_voluongquang.dto.response.ProductGroupSimpleDTO;
 import com.example.be_voluongquang.dto.response.product.ProductResponseDTO;
@@ -49,6 +50,11 @@ public class ProductController {
         System.out.println("product pages called");
         // Trả về phân trang (Page) theo ngày tạo mới nhất; hỗ trợ tìm kiếm
         return ResponseEntity.ok(productService.getProductsPaged(page, size, search));
+    }
+
+    @PostMapping("/search")
+    public ResponseEntity<Page<ProductResponseDTO>> searchProducts(@RequestBody ProductSearchRequest request) {
+        return ResponseEntity.ok(productService.searchProducts(request));
     }
 
     @GetMapping("/{id}")

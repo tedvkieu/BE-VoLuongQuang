@@ -13,6 +13,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.util.AntPathMatcher;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -24,6 +25,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final Set<String> PUBLIC_ENDPOINTS = Set.of(
             "/api/auth/login"
     );
+
+    private static final Set<String> PUBLIC_GET_PATTERNS = Set.of(
+            "/api/product/**"
+    );
+
+    private static final Set<String> ADMIN_PROTECTED_PATTERNS = Set.of(
+            "/api/product/**",
+            "/api/brand/**",
+            "/api/category/**",
+            "/api/product-group/**",
+            "/api/discount/**",
+            "/api/admin/**"
+    );
+
+    private static final Set<String> ADMIN_ALWAYS_PATTERNS = Set.of(
+            "/api/user/**"
+    );
+
+    private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
     private final JwtUtil jwtUtil;
 
@@ -50,7 +70,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return true;
         }
 
-        if (HttpMethod.GET.matches(request.getMethod()) && path.startsWith("/api/product")) {
+        if (HttpMethod.GET.matches(request.getMethod()) && isPublicGetPath(path)) {
             return true;
         }
 
@@ -60,6 +80,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+        String path = request.getRequestURI();
         String token = extractToken(request);
         if (token == null || token.isBlank()) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -79,6 +100,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Object role = claims.get("role");
             if (role instanceof String && !((String) role).isBlank()) {
                 request.setAttribute(ATTR_AUTHENTICATED_ROLE, role);
+                if (requiresAdmin(request, path) && !isAdminRole((String) role)) {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.getWriter().write("Forbidden: admin required");
+                    return;
+                }
             }
         } catch (Exception ex) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -102,5 +128,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
         return null;
+    }
+
+    private boolean isPublicGetPath(String path) {
+        return PUBLIC_GET_PATTERNS.stream().anyMatch(pattern -> PATH_MATCHER.match(pattern, path));
+    }
+
+    private boolean requiresAdmin(HttpServletRequest request, String path) {
+        if (ADMIN_ALWAYS_PATTERNS.stream().anyMatch(pattern -> PATH_MATCHER.match(pattern, path))) {
+            return true;
+        }
+
+        // Only enforce admin for non-GET methods on protected patterns
+        if (HttpMethod.GET.matches(request.getMethod())) {
+            return false;
+        }
+        return ADMIN_PROTECTED_PATTERNS.stream()
+                .anyMatch(pattern -> PATH_MATCHER.match(pattern, path));
+    }
+
+    private boolean isAdminRole(String role) {
+        return "ADMIN".equalsIgnoreCase(role);
     }
 }

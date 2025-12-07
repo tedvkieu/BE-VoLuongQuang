@@ -23,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 import lombok.extern.slf4j.Slf4j;
 import com.example.be_voluongquang.dto.request.product.ImportErrorDTO;
 import com.example.be_voluongquang.dto.request.product.ProductRequestDTO;
+import com.example.be_voluongquang.dto.request.product.ProductSearchRequest;
 import com.example.be_voluongquang.dto.response.product.ProductResponseDTO;
 import com.example.be_voluongquang.entity.BrandEntity;
 import com.example.be_voluongquang.entity.CategoryEntity;
@@ -44,10 +45,13 @@ import com.opencsv.CSVReaderBuilder;
 import com.opencsv.exceptions.CsvException;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
+import jakarta.persistence.criteria.Predicate;
 
 @Slf4j
 @Service
@@ -131,6 +135,67 @@ public class ProductServiceImpl implements ProductService {
         }
 
         return entityPage.map(productMapper::toDTO);
+    }
+
+    @Override
+    public Page<ProductResponseDTO> searchProducts(ProductSearchRequest request) {
+        int safePage = request.getPage() != null ? Math.max(0, request.getPage()) : 0;
+        int safeSize = (request.getSize() != null && request.getSize() > 0) ? request.getSize() : 15;
+        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        Specification<ProductEntity> specification = buildProductSpecification(request);
+        Page<ProductEntity> entityPage = productRepository.findAll(specification, pageable);
+        return entityPage.map(productMapper::toDTO);
+    }
+
+    private Specification<ProductEntity> buildProductSpecification(ProductSearchRequest request) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (StringUtils.hasText(request.getSearch())) {
+                String term = "%" + request.getSearch().trim().toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("name")), term),
+                        cb.like(cb.lower(root.get("description")), term),
+                        cb.like(cb.lower(root.get("productId")), term)));
+            }
+
+            if (!CollectionUtils.isEmpty(request.getBrandIds())) {
+                predicates.add(root.get("brand").get("brandId").in(request.getBrandIds()));
+            }
+            if (!CollectionUtils.isEmpty(request.getCategoryIds())) {
+                predicates.add(root.get("category").get("categoryId").in(request.getCategoryIds()));
+            }
+            if (!CollectionUtils.isEmpty(request.getProductGroupIds())) {
+                predicates.add(root.get("productGroup").get("groupId").in(request.getProductGroupIds()));
+            }
+
+            Double minPrice = request.getMinPrice();
+            Double maxPrice = request.getMaxPrice();
+            if (minPrice != null && maxPrice != null && maxPrice < minPrice) {
+                double temp = minPrice;
+                minPrice = maxPrice;
+                maxPrice = temp;
+            }
+
+            if (minPrice != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("price"), minPrice));
+            }
+            if (maxPrice != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("price"), maxPrice));
+            }
+            if (request.getMinDiscount() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("discountPercent"), request.getMinDiscount()));
+            }
+            if (request.getIsActive() != null) {
+                predicates.add(cb.equal(root.get("isActive"), request.getIsActive()));
+            }
+            if (request.getIsFeatured() != null) {
+                predicates.add(cb.equal(root.get("isFeatured"), request.getIsFeatured()));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
     }
 
     // Service Impl for POST Method -----------------------------------------

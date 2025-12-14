@@ -55,7 +55,7 @@ CREATE TABLE users (
     password TEXT NOT NULL,
     phone VARCHAR(50),
     address TEXT,
-    role VARCHAR(50) CHECK (role IN ('CUSTOMER', 'ADMIN')) NOT NULL,
+    role VARCHAR(50) CHECK (role IN ('CUSTOMER', 'ADMIN', 'STAFF')) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

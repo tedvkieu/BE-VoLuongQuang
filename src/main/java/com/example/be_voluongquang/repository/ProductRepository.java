@@ -155,13 +155,15 @@ public interface ProductRepository extends JpaRepository<ProductEntity, String>,
     /**
      * Tìm product theo tên hoặc mô tả
      */
-    @Query("SELECT p FROM product p WHERE p.name LIKE %:searchTerm% OR p.description LIKE %:searchTerm%")
+    @Query("SELECT p FROM product p WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) "
+            + "OR LOWER(p.description) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
     List<ProductEntity> findByNameOrDescriptionContaining(@Param("searchTerm") String searchTerm);
     
     /**
      * Tìm product theo tên hoặc mô tả với pagination
      */
-    @Query("SELECT p FROM product p WHERE p.name LIKE %:searchTerm% OR p.description LIKE %:searchTerm%")
+    @Query("SELECT p FROM product p WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) "
+            + "OR LOWER(p.description) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
     Page<ProductEntity> findByNameOrDescriptionContaining(@Param("searchTerm") String searchTerm, Pageable pageable);
 
     /**

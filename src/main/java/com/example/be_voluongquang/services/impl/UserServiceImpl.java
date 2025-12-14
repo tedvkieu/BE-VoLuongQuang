@@ -32,6 +32,7 @@ public class UserServiceImpl implements UserService {
     private PasswordEncoder passwordEncoder;
 
     private static final Set<String> ALLOWED_CREATE_ROLES = Set.of("CUSTOMER", "STAFF");
+    private static final Set<String> ALLOWED_UPDATE_ROLES = Set.of("ADMIN", "CUSTOMER", "STAFF");
 
     @Override
     public Optional<UserResponseDTO> getUserById(String id) {
@@ -85,6 +86,47 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    public UserResponseDTO updateUser(String id, UserRequestDTO request) {
+        UserEntity user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "userId", id));
+
+        if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
+            String email = request.getEmail().trim();
+            if (!email.equalsIgnoreCase(user.getEmail()) && userRepository.existsByEmailIgnoreCase(email)) {
+                throw new UserAlreadyExistsException(email);
+            }
+            user.setEmail(email);
+        }
+
+        if (request.getFullName() != null) {
+            user.setFullName(request.getFullName());
+        }
+
+        if (request.getPhone() != null) {
+            user.setPhone(request.getPhone());
+        }
+
+        if (request.getAddress() != null) {
+            user.setAddress(request.getAddress());
+        }
+
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+
+        if (request.getRole() != null && !request.getRole().trim().isEmpty()) {
+            String normalizedRole = request.getRole().trim().toUpperCase();
+            if (!ALLOWED_UPDATE_ROLES.contains(normalizedRole)) {
+                throw new IllegalArgumentException("Role must be CUSTOMER, STAFF hoặc ADMIN");
+            }
+            user.setRole(normalizedRole);
+        }
+
+        return userMapper.toDto(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
     public UserResponseDTO updateUserRole(String id, UserRoleUpdateRequest request) {
         UserEntity user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "userId", id));
@@ -101,9 +143,9 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void deleteUser(String id) {
-        if (!userRepository.existsById(id)) {
-            throw new ResourceNotFoundException("User", "userId", id);
-        }
+        UserEntity target = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "userId", id));
+
         userRepository.deleteById(id);
     }
 }

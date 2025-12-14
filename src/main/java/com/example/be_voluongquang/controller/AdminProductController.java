@@ -2,23 +2,25 @@ package com.example.be_voluongquang.controller;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.security.access.prepost.PreAuthorize;
+
 import com.example.be_voluongquang.dto.request.product.ProductRequestDTO;
 import com.example.be_voluongquang.dto.request.product.ProductSearchRequest;
 import com.example.be_voluongquang.dto.response.BrandSimpleDTO;
@@ -27,11 +29,11 @@ import com.example.be_voluongquang.dto.response.product.ProductResponseDTO;
 import com.example.be_voluongquang.services.BrandService;
 import com.example.be_voluongquang.services.ProductGroupService;
 import com.example.be_voluongquang.services.ProductService;
-import org.springframework.data.domain.Page;
 
 @RestController
-@RequestMapping(path = "/api/product", produces = MediaType.APPLICATION_JSON_VALUE)
-public class ProductController {
+@RequestMapping(path = "/api/admin/product", produces = MediaType.APPLICATION_JSON_VALUE)
+@PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+public class AdminProductController {
 
     @Autowired
     private ProductService productService;
@@ -40,26 +42,27 @@ public class ProductController {
     @Autowired
     private ProductGroupService productGroupService;
 
-    // GET MAPPING API ----------------------------------------------------------
+    // READ --------------------------------------------------------------------
 
     @GetMapping
-    public ResponseEntity<?> getProducts(
+    public ResponseEntity<Page<ProductResponseDTO>> getProducts(
             @RequestParam(name = "page", required = false, defaultValue = "0") Integer page,
             @RequestParam(name = "size", required = false, defaultValue = "15") Integer size,
             @RequestParam(name = "search", required = false) String search) {
 
-        System.out.println("product pages called");
-        // Trả về phân trang (Page) theo ngày tạo mới nhất; hỗ trợ tìm kiếm
         return ResponseEntity.ok(productService.getProductsPaged(page, size, search));
+
     }
 
     @PostMapping("/search")
-    public ResponseEntity<Page<ProductResponseDTO>> searchProducts(@RequestBody ProductSearchRequest request) {
-        return ResponseEntity.ok(productService.searchProducts(request));
+    public ResponseEntity<Page<ProductResponseDTO>> searchProducts(
+            @RequestBody ProductSearchRequest searchRequest) {
+        return ResponseEntity.ok(productService.searchProducts(searchRequest));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ProductResponseDTO> getProductById(@PathVariable String id) {
+    public ResponseEntity<ProductResponseDTO> getProductById(
+            @PathVariable String id) {
         return ResponseEntity.ok(productService.getProductById(id));
     }
 
@@ -91,55 +94,63 @@ public class ProductController {
         return productGroupService.getAllProductGroups();
     }
 
-    // POST MAPPING API ----------------------------------------------------------
-    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+    // WRITE -------------------------------------------------------------------
+
     @PostMapping
     public ResponseEntity<?> createAProduct(
             @RequestPart(value = "images", required = false) MultipartFile[] images,
             @RequestPart(value = "product") ProductRequestDTO product) {
-
-        System.out.println("checck imageS: " + images);
-        System.out.println("check product: " + product);
-
         ProductResponseDTO savedProduct = productService.createAProduct(images, product);
         return ResponseEntity.ok(savedProduct);
     }
 
     @PostMapping("/import")
-    public ResponseEntity<?> importCsv(@RequestParam("file") MultipartFile file) throws IOException {
-        // Gọi service trả về Map<String, Object> gồm success và errors
-        Map<String, Object> result = productService.importProductsFromCsv(file);
-        return ResponseEntity.ok(result);
+    public ResponseEntity<?> importCsv(
+            @RequestParam("file") MultipartFile file) throws IOException {
+        return ResponseEntity.ok(productService.importProductsFromCsv(file));
     }
 
-    // PUT MAPPING API ----------------------------------------------------------
-    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     @PutMapping(path = "/{id}")
     public ResponseEntity<?> updateAProduct(
             @PathVariable String id,
             @RequestPart(value = "images", required = false) MultipartFile[] images,
             @RequestPart(value = "product") ProductRequestDTO product) {
-
-        System.out.println("checck imageS: " + images);
-        System.out.println("check product: " + product);
         ProductResponseDTO savedProduct = productService.updateAProduct(id, images, product);
         return ResponseEntity.ok(savedProduct);
     }
 
-    // DELETE MAPPING API
-    // ----T------------------------------------------------------
-    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+    @PatchMapping(path = "/{id}/featured")
+    public ResponseEntity<ProductResponseDTO> updateFeatured(
+            @PathVariable String id,
+            @RequestBody FeaturedToggleRequest request) {
+        ProductResponseDTO updated = productService.updateFeatured(id, request.isFeatured());
+        return ResponseEntity.ok(updated);
+    }
+
+    @PatchMapping(path = "/{id}/discount")
+    public ResponseEntity<ProductResponseDTO> updateDiscount(
+            @PathVariable String id,
+            @RequestBody DiscountUpdateRequest request) {
+        ProductResponseDTO updated = productService.updateDiscount(id, request.discountPercent());
+        return ResponseEntity.ok(updated);
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAProduct(@PathVariable String id) {
         productService.deleteAProduct(id);
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     @DeleteMapping("/batch")
-    public ResponseEntity<Void> deleteMultipleProducts(@RequestBody List<String> ids) {
+    public ResponseEntity<Void> deleteMultipleProducts(
+            @RequestBody List<String> ids) {
         productService.deleteMultipleProducts(ids);
         return ResponseEntity.noContent().build();
     }
 
+    public record FeaturedToggleRequest(boolean isFeatured) {
+    }
+
+    public record DiscountUpdateRequest(Integer discountPercent) {
+    }
 }

@@ -15,6 +15,8 @@ public interface UserService {
 
     public java.util.List<UserResponseDTO> getUsers(String search, String role);
 
+    public UserResponseDTO updateUser(String id, UserRequestDTO user);
+
     public UserResponseDTO updateUserRole(String id, UserRoleUpdateRequest request);
 
     public void deleteUser(String id);

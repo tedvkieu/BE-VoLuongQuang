@@ -1,12 +1,8 @@
 package com.example.be_voluongquang.services;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-
 import org.springframework.web.multipart.MultipartFile;
-
-import com.example.be_voluongquang.dto.request.product.ImportErrorDTO;
 import com.example.be_voluongquang.dto.request.product.ProductRequestDTO;
 import com.example.be_voluongquang.dto.request.product.ProductSearchRequest;
 import com.example.be_voluongquang.dto.response.product.ProductResponseDTO;
@@ -46,6 +42,10 @@ public interface ProductService {
 
     // Service for PUT method ----------------------------------
     ProductResponseDTO updateAProduct(String id, MultipartFile[] images, ProductRequestDTO product);
+
+    ProductResponseDTO updateFeatured(String id, boolean isFeatured);
+
+    ProductResponseDTO updateDiscount(String id, Integer discountPercent);
 
     // Service for DELETE method ----------------------------------
     ProductResponseDTO deleteAProduct(String id);

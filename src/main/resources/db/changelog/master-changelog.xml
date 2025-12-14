@@ -6,4 +6,5 @@
 	<include file="001-structure-db.xml" relativeToChangelogFile="true" />
 	<!-- Nếu cần thêm file -->
 	<include file="002-seed-data.xml" relativeToChangelogFile="true" />
+	<include file="003-allow-staff-role.xml" relativeToChangelogFile="true" />
 </databaseChangeLog>

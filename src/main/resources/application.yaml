@@ -19,8 +19,6 @@ spring:
     liquibase:
         change-log: classpath:db/changelog/master-changelog.xml
         enabled: true
-    autoconfigure:
-        exclude: org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
     servlet:
         multipart:
             max-file-size: 10MB

@@ -5,6 +5,9 @@ import java.util.Map;
 import java.util.Set;
 
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -36,10 +39,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/api/category/**",
             "/api/product-group/**",
             "/api/discount/**",
-            "/api/admin/**"
-    );
-
-    private static final Set<String> ADMIN_ALWAYS_PATTERNS = Set.of(
+            "/api/admin/**",
             "/api/user/**"
     );
 
@@ -99,12 +99,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             Object role = claims.get("role");
             if (role instanceof String && !((String) role).isBlank()) {
-                request.setAttribute(ATTR_AUTHENTICATED_ROLE, role);
-                if (requiresAdmin(request, path) && !isAdminRole((String) role)) {
+                String normalizedRole = normalizeRole((String) role);
+                request.setAttribute(ATTR_AUTHENTICATED_ROLE, normalizedRole);
+
+                if (requiresPrivileged(request, path) && !isPrivilegedRole(normalizedRole)) {
                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    response.getWriter().write("Forbidden: admin required");
+                    response.getWriter().write("Forbidden: admin or staff required");
                     return;
                 }
+
+                UsernamePasswordAuthenticationToken authentication = buildAuthentication(sub, normalizedRole);
+                SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception ex) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -113,6 +118,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+        SecurityContextHolder.clearContext();
     }
 
     private String extractToken(HttpServletRequest request) {
@@ -134,20 +140,39 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return PUBLIC_GET_PATTERNS.stream().anyMatch(pattern -> PATH_MATCHER.match(pattern, path));
     }
 
-    private boolean requiresAdmin(HttpServletRequest request, String path) {
-        if (ADMIN_ALWAYS_PATTERNS.stream().anyMatch(pattern -> PATH_MATCHER.match(pattern, path))) {
-            return true;
-        }
-
-        // Only enforce admin for non-GET methods on protected patterns
+    private boolean requiresPrivileged(HttpServletRequest request, String path) {
+        // Only enforce for non-GET on protected patterns
         if (HttpMethod.GET.matches(request.getMethod())) {
             return false;
         }
-        return ADMIN_PROTECTED_PATTERNS.stream()
-                .anyMatch(pattern -> PATH_MATCHER.match(pattern, path));
+        return ADMIN_PROTECTED_PATTERNS.stream().anyMatch(pattern -> PATH_MATCHER.match(pattern, path));
     }
 
     private boolean isAdminRole(String role) {
         return "ADMIN".equalsIgnoreCase(role);
+    }
+
+    private boolean isPrivilegedRole(String role) {
+        return "ADMIN".equalsIgnoreCase(role) || "STAFF".equalsIgnoreCase(role);
+    }
+
+    private String normalizeRole(String rawRole) {
+        if (rawRole == null) {
+            return null;
+        }
+        String normalized = rawRole.trim().toUpperCase();
+        if (normalized.startsWith("ROLE_")) {
+            normalized = normalized.substring(5);
+        }
+        return normalized;
+    }
+
+    private UsernamePasswordAuthenticationToken buildAuthentication(Object principal, String normalizedRole) {
+        String role = normalizedRole == null ? "" : normalizedRole.trim().toUpperCase();
+        String authority = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+        return new UsernamePasswordAuthenticationToken(
+                principal,
+                null,
+                java.util.List.of(new SimpleGrantedAuthority(authority)));
     }
 }

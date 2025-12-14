@@ -116,6 +116,9 @@ public class ProductServiceImpl implements ProductService {
             entityPage = productRepository.findAll(pageable);
         }
 
+        log.info("[getProductsPaged] page={}, size={}, search='{}', total={}",
+                safePage, safeSize, search, entityPage.getTotalElements());
+
         return entityPage.map(productMapper::toDTO);
     }
 
@@ -145,6 +148,8 @@ public class ProductServiceImpl implements ProductService {
 
         Specification<ProductEntity> specification = buildProductSpecification(request);
         Page<ProductEntity> entityPage = productRepository.findAll(specification, pageable);
+        log.info("[searchProducts] page={}, size={}, search='{}', total={}",
+                safePage, safeSize, request.getSearch(), entityPage.getTotalElements());
         return entityPage.map(productMapper::toDTO);
     }
 
@@ -447,6 +452,27 @@ public class ProductServiceImpl implements ProductService {
         log.info("Final saved product imageUrl: {}", savedProduct.getImageUrl());
 
         return productMapper.toDTO(savedProduct);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponseDTO updateFeatured(String id, boolean isFeatured) {
+        ProductEntity existingProduct = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", id));
+        existingProduct.setIsFeatured(isFeatured);
+        ProductEntity saved = productRepository.save(existingProduct);
+        return productMapper.toDTO(saved);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponseDTO updateDiscount(String id, Integer discountPercent) {
+        ProductEntity existingProduct = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", id));
+        int sanitized = discountPercent == null ? 0 : Math.max(0, Math.min(discountPercent, 100));
+        existingProduct.setDiscountPercent(sanitized);
+        ProductEntity saved = productRepository.save(existingProduct);
+        return productMapper.toDTO(saved);
     }
 
     /**

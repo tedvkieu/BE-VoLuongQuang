@@ -35,7 +35,7 @@ public class GlobalExceptionHandler {
 
                 ErrorResponseDTO errorResponse = new ErrorResponseDTO(
                                 HttpStatus.CONFLICT.value(),
-                                "Conflict",
+                                "Email đã tồn tại",
                                 ex.getMessage(),
                                 request.getRequestURI());
 

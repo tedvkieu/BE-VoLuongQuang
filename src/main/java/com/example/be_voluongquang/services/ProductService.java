@@ -35,6 +35,11 @@ public interface ProductService {
      */
     Page<ProductResponseDTO> searchProducts(ProductSearchRequest request);
 
+    /**
+     * Xuất danh sách product ra file Excel theo bộ lọc/tìm kiếm.
+     */
+    byte[] exportProducts(ProductSearchRequest request);
+
     // Service for POST method ----------------------------------
     ProductResponseDTO createAProduct(MultipartFile[] images, ProductRequestDTO product);
 

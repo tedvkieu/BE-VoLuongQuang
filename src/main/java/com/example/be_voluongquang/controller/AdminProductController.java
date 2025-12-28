@@ -2,9 +2,12 @@ package com.example.be_voluongquang.controller;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,9 +27,11 @@ import org.springframework.web.multipart.MultipartFile;
 import com.example.be_voluongquang.dto.request.product.ProductRequestDTO;
 import com.example.be_voluongquang.dto.request.product.ProductSearchRequest;
 import com.example.be_voluongquang.dto.response.BrandSimpleDTO;
+import com.example.be_voluongquang.dto.response.CategorySimpleDTO;
 import com.example.be_voluongquang.dto.response.ProductGroupSimpleDTO;
 import com.example.be_voluongquang.dto.response.product.ProductResponseDTO;
 import com.example.be_voluongquang.services.BrandService;
+import com.example.be_voluongquang.services.CategoryService;
 import com.example.be_voluongquang.services.ProductGroupService;
 import com.example.be_voluongquang.services.ProductService;
 
@@ -41,6 +46,8 @@ public class AdminProductController {
     private BrandService brandService;
     @Autowired
     private ProductGroupService productGroupService;
+    @Autowired
+    private CategoryService categoryService;
 
     // READ --------------------------------------------------------------------
 
@@ -48,9 +55,23 @@ public class AdminProductController {
     public ResponseEntity<Page<ProductResponseDTO>> getProducts(
             @RequestParam(name = "page", required = false, defaultValue = "0") Integer page,
             @RequestParam(name = "size", required = false, defaultValue = "15") Integer size,
-            @RequestParam(name = "search", required = false) String search) {
+            @RequestParam(name = "search", required = false) String search,
+            @RequestParam(name = "brandIds", required = false) List<String> brandIds,
+            @RequestParam(name = "brand_id", required = false) List<String> brandIdsSnake,
+            @RequestParam(name = "categoryIds", required = false) List<String> categoryIds,
+            @RequestParam(name = "category_id", required = false) List<String> categoryIdsSnake,
+            @RequestParam(name = "productGroupIds", required = false) List<String> productGroupIds,
+            @RequestParam(name = "product_group_id", required = false) List<String> productGroupIdsSnake) {
 
-        return ResponseEntity.ok(productService.getProductsPaged(page, size, search));
+        ProductSearchRequest request = new ProductSearchRequest();
+        request.setPage(page);
+        request.setSize(size);
+        request.setSearch(search);
+        request.setBrandIds(firstNonEmpty(brandIds, brandIdsSnake));
+        request.setCategoryIds(firstNonEmpty(categoryIds, categoryIdsSnake));
+        request.setProductGroupIds(firstNonEmpty(productGroupIds, productGroupIdsSnake));
+
+        return ResponseEntity.ok(productService.searchProducts(request));
 
     }
 
@@ -58,6 +79,20 @@ public class AdminProductController {
     public ResponseEntity<Page<ProductResponseDTO>> searchProducts(
             @RequestBody ProductSearchRequest searchRequest) {
         return ResponseEntity.ok(productService.searchProducts(searchRequest));
+    }
+
+    @PostMapping(value = "/export/filter", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    public ResponseEntity<byte[]> exportProductsWithFilter(
+            @RequestBody(required = false) ProductSearchRequest searchRequest) {
+        byte[] fileContent = productService.exportProducts(searchRequest);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=products_filtered.xlsx");
+        headers.add(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(fileContent);
     }
 
     @GetMapping("/{id}")
@@ -92,6 +127,20 @@ public class AdminProductController {
     @GetMapping("/product-groups")
     public List<ProductGroupSimpleDTO> getAllProductGroups() {
         return productGroupService.getAllProductGroups();
+    }
+
+    @GetMapping("/categories")
+    public List<CategorySimpleDTO> getAllCategories() {
+        return categoryService.getAllCategories();
+    }
+
+    @GetMapping("/filters")
+    public ResponseEntity<Map<String, Object>> getFilterOptions() {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("brands", brandService.getAllBrands());
+        payload.put("categories", categoryService.getAllCategories());
+        payload.put("productGroups", productGroupService.getAllProductGroups());
+        return ResponseEntity.ok(payload);
     }
 
     // WRITE -------------------------------------------------------------------
@@ -152,5 +201,15 @@ public class AdminProductController {
     }
 
     public record DiscountUpdateRequest(Integer discountPercent) {
+    }
+
+    private List<String> firstNonEmpty(List<String> primary, List<String> fallback) {
+        if (primary != null && !primary.isEmpty()) {
+            return primary;
+        }
+        if (fallback != null && !fallback.isEmpty()) {
+            return fallback;
+        }
+        return null;
     }
 }

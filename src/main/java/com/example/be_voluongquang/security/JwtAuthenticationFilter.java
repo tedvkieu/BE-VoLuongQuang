@@ -26,11 +26,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     public static final String ATTR_AUTHENTICATED_ROLE = "authenticatedUserRole";
 
     private static final Set<String> PUBLIC_ENDPOINTS = Set.of(
-            "/api/auth/login"
+            "/api/auth/login",
+            "/api/auth/register",
+            "/api/product/search"
     );
 
     private static final Set<String> PUBLIC_GET_PATTERNS = Set.of(
-            "/api/product/**"
+            "/api/product/**",
+            "/api/category/public/**"
+    );
+
+    private static final Set<String> PUBLIC_POST_PATTERNS = Set.of(
+            "/api/product/search"
+    );
+
+    private static final Set<String> PUBLIC_ENDPOINT_PATTERNS = Set.of(
+            "/api/product/search"
     );
 
     private static final Set<String> ADMIN_PROTECTED_PATTERNS = Set.of(
@@ -70,7 +81,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return true;
         }
 
+        if (isPublicEndpointPattern(path)) {
+            return true;
+        }
+
         if (HttpMethod.GET.matches(request.getMethod()) && isPublicGetPath(path)) {
+            return true;
+        }
+
+        if (HttpMethod.POST.matches(request.getMethod()) && isPublicPostPath(path)) {
             return true;
         }
 
@@ -138,6 +157,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private boolean isPublicGetPath(String path) {
         return PUBLIC_GET_PATTERNS.stream().anyMatch(pattern -> PATH_MATCHER.match(pattern, path));
+    }
+
+    private boolean isPublicPostPath(String path) {
+        return PUBLIC_POST_PATTERNS.stream().anyMatch(pattern -> PATH_MATCHER.match(pattern, path));
+    }
+
+    private boolean isPublicEndpointPattern(String path) {
+        return PUBLIC_ENDPOINT_PATTERNS.stream().anyMatch(pattern -> PATH_MATCHER.match(pattern, path));
     }
 
     private boolean requiresPrivileged(HttpServletRequest request, String path) {

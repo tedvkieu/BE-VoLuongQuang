@@ -1,6 +1,7 @@
 package com.example.be_voluongquang.services.impl;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -14,6 +15,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -151,6 +153,73 @@ public class ProductServiceImpl implements ProductService {
         log.info("[searchProducts] page={}, size={}, search='{}', total={}",
                 safePage, safeSize, request.getSearch(), entityPage.getTotalElements());
         return entityPage.map(productMapper::toDTO);
+    }
+
+    @Override
+    public byte[] exportProducts(ProductSearchRequest request) {
+        ProductSearchRequest safeRequest = (request != null) ? request : new ProductSearchRequest();
+        int safePage = safeRequest.getPage() != null ? Math.max(0, safeRequest.getPage()) : 0;
+        int safeSize = (safeRequest.getSize() != null && safeRequest.getSize() > 0) ? safeRequest.getSize() : 15;
+        Specification<ProductEntity> specification = buildProductSpecification(safeRequest);
+        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+        List<ProductEntity> products = productRepository.findAll(specification, pageable).getContent();
+
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("Products");
+            int rowIndex = 0;
+
+            String[] headers = new String[] { "Product ID", "Name", "Product Group ID", "Category ID", "Brand ID",
+                    "Price", "Cost Price", "Wholesale Price", "Discount Percent", "Stock Quantity", "Weight", "Unit",
+                    "Is Featured", "Is Active", "Image URL", "Description", "URL Shopee", "URL Lazada", "URL Other",
+                    "Created At", "Updated At" };
+
+            Row headerRow = sheet.createRow(rowIndex++);
+            for (int i = 0; i < headers.length; i++) {
+                headerRow.createCell(i).setCellValue(headers[i]);
+            }
+
+            for (ProductEntity product : products) {
+                Row row = sheet.createRow(rowIndex++);
+                int col = 0;
+
+                row.createCell(col++).setCellValue(safeString(product.getProductId()));
+                row.createCell(col++).setCellValue(safeString(product.getName()));
+                row.createCell(col++).setCellValue(
+                        product.getProductGroup() != null ? safeString(product.getProductGroup().getGroupId()) : "");
+                row.createCell(col++).setCellValue(
+                        product.getCategory() != null ? safeString(product.getCategory().getCategoryId()) : "");
+                row.createCell(col++).setCellValue(
+                        product.getBrand() != null ? safeString(product.getBrand().getBrandId()) : "");
+                row.createCell(col++).setCellValue(safeString(product.getPrice()));
+                row.createCell(col++).setCellValue(safeString(product.getCostPrice()));
+                row.createCell(col++).setCellValue(safeString(product.getWholesalePrice()));
+                row.createCell(col++).setCellValue(safeString(product.getDiscountPercent()));
+                row.createCell(col++).setCellValue(safeString(product.getStockQuantity()));
+                row.createCell(col++).setCellValue(safeString(product.getWeight()));
+                row.createCell(col++).setCellValue(safeString(product.getUnit()));
+                row.createCell(col++).setCellValue(safeString(product.getIsFeatured()));
+                row.createCell(col++).setCellValue(safeString(product.getIsActive()));
+                row.createCell(col++).setCellValue(safeString(product.getImageUrl()));
+                row.createCell(col++).setCellValue(safeString(product.getDescription()));
+                row.createCell(col++).setCellValue(safeString(product.getUrlShopee()));
+                row.createCell(col++).setCellValue(safeString(product.getUrlLazada()));
+                row.createCell(col++).setCellValue(safeString(product.getUrlOther()));
+                row.createCell(col++).setCellValue(
+                        product.getCreatedAt() != null ? product.getCreatedAt().toString() : "");
+                row.createCell(col++).setCellValue(
+                        product.getUpdatedAt() != null ? product.getUpdatedAt().toString() : "");
+            }
+
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            workbook.write(out);
+            return out.toByteArray();
+        } catch (IOException e) {
+            log.error("Failed to export products to Excel", e);
+            throw new RuntimeException("Không thể xuất file Excel sản phẩm", e);
+        }
     }
 
     private Specification<ProductEntity> buildProductSpecification(ProductSearchRequest request) {
@@ -594,6 +663,10 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public void deleteMultipleProducts(List<String> ids) {
         ids.forEach(this::deleteAProduct);
+    }
+
+    private String safeString(Object value) {
+        return value == null ? "" : value.toString();
     }
 
     // Hàm xử lý từng dòng (dùng chung cho cả csv và xlsx)

@@ -6,7 +6,7 @@ package com.example.be_voluongquang.exception;
 public class UserAlreadyExistsException extends RuntimeException {
     
     public UserAlreadyExistsException(String email) {
-        super("User with email '" + email + "' already exists");
+        super("Email '" + email + "' đã tồn tại trong hệ thống");
     }
     
     public UserAlreadyExistsException(String message, Throwable cause) {

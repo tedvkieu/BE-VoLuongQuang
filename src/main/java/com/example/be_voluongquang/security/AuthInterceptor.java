@@ -30,8 +30,10 @@ public class AuthInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        // Only protect admin operations on product APIs (non-GET)
-        if (path.startsWith("/api/product") && !HttpMethod.GET.matches(method)) {
+        // Only protect admin operations on product APIs (non-GET), except the public search endpoint
+        if (!"/api/product/search".equals(path) &&
+            path.startsWith("/api/product") &&
+            !HttpMethod.GET.matches(method)) {
             String token = extractToken(request);
             if (token == null) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);

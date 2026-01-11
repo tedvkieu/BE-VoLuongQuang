@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.Set;
 
 import org.springframework.http.HttpMethod;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,6 +23,8 @@ import org.springframework.util.AntPathMatcher;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+
     public static final String ATTR_AUTHENTICATED_CLAIMS = "authenticatedClaims";
     public static final String ATTR_AUTHENTICATED_USER_ID = "authenticatedUserId";
     public static final String ATTR_AUTHENTICATED_ROLE = "authenticatedUserRole";
@@ -28,21 +32,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final Set<String> PUBLIC_ENDPOINTS = Set.of(
             "/api/auth/login",
             "/api/auth/register",
-            "/api/product/search"
-    );
+            "/api/auth/me",
+            "/api/product/search",
+            "/api/brand/public");
 
     private static final Set<String> PUBLIC_GET_PATTERNS = Set.of(
+            "/api/product",
             "/api/product/**",
-            "/api/category/public/**"
-    );
+            "/api/category/public/**",
+            "/api/auth/**");
 
     private static final Set<String> PUBLIC_POST_PATTERNS = Set.of(
-            "/api/product/search"
-    );
+            "/api/product/search",
+            "/api/auth/**");
 
     private static final Set<String> PUBLIC_ENDPOINT_PATTERNS = Set.of(
-            "/api/product/search"
-    );
+            "/api/product/search",
+            "/api/auth/**");
 
     private static final Set<String> ADMIN_PROTECTED_PATTERNS = Set.of(
             "/api/product/**",
@@ -51,8 +57,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/api/product-group/**",
             "/api/discount/**",
             "/api/admin/**",
-            "/api/user/**"
-    );
+            "/api/user/**");
 
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
@@ -102,6 +107,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         String token = extractToken(request);
         if (token == null || token.isBlank()) {
+            log.info("JWT filter blocked request - missing token. path={}, method={}, hasAuthHeader={}, hasAccessTokenCookie={}",
+                    path, request.getMethod(), request.getHeader("Authorization") != null, hasAccessTokenCookie(request));
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("Unauthorized");
             return;
@@ -131,6 +138,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception ex) {
+            log.warn("JWT parsing failed for path={}, method={}: {}", path, request.getMethod(), ex.getMessage());
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("Invalid token");
             return;
@@ -153,6 +161,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
         return null;
+    }
+
+    private boolean hasAccessTokenCookie(HttpServletRequest request) {
+        if (request.getCookies() == null) {
+            return false;
+        }
+        for (Cookie cookie : request.getCookies()) {
+            if ("accessToken".equals(cookie.getName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean isPublicGetPath(String path) {

@@ -47,7 +47,7 @@ public class AuthController {
     public ResponseEntity<?> me(HttpServletRequest request) {
         String userId = resolveUserId(request);
         if (userId == null || userId.isBlank()) {
-            return ResponseEntity.status(401).body("Unauthorized");
+            return ResponseEntity.ok(buildGuestProfile());
         }
 
         try {
@@ -74,7 +74,7 @@ public class AuthController {
             }
             return ResponseEntity.status(404).body("User not found");
         } catch (Exception e) {
-            return ResponseEntity.status(401).body("Invalid token");
+            return ResponseEntity.ok(buildGuestProfile());
         }
     }
 
@@ -115,5 +115,15 @@ public class AuthController {
             }
         }
         return null;
+    }
+
+    private UserProfileResponse buildGuestProfile() {
+        return UserProfileResponse.builder()
+                .userId(null)
+                .fullName(null)
+                .email(null)
+                .role(null)
+                .cartItemCount(0)
+                .build();
     }
 }

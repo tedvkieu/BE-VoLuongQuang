@@ -19,4 +19,9 @@ public class BrandController {
     public List<BrandSimpleDTO> getAllBrands() {
         return brandService.getAllBrands();
     }
-} 
+
+    @GetMapping("/public")
+    public List<BrandSimpleDTO> getPublicBrands() {
+        return brandService.getAllBrands();
+    }
+}

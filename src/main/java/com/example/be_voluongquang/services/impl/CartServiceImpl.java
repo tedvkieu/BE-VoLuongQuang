@@ -40,7 +40,7 @@ public class CartServiceImpl implements CartService {
             throw new IllegalArgumentException("Không xác định được người dùng");
         }
 
-        return cartRepository.findCartWithItemsAndProductDetailsByUserId(userId)
+        return cartRepository.findCartWithItemsByUserId(userId)
                 .map(this::mapToCartResponse)
                 .orElseGet(this::emptyCartResponse);
     }
@@ -102,7 +102,7 @@ public class CartServiceImpl implements CartService {
         cartItemRepository.save(cartItem);
         cartRepository.flush();
 
-        return cartRepository.findCartWithItemsAndProductDetailsByUserId(userId)
+        return cartRepository.findCartWithItemsByUserId(userId)
                 .map(this::mapToCartResponse)
                 .orElseGet(this::emptyCartResponse);
     }
@@ -125,7 +125,7 @@ public class CartServiceImpl implements CartService {
             return removeItemFromCart(userId, request.getProductId());
         }
 
-        CartEntity cart = cartRepository.findCartWithItemsAndProductDetailsByUserId(userId)
+        CartEntity cart = cartRepository.findCartWithItemsByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cart", "userId", userId));
 
         CartItemEntity cartItem = cart.getCartItems().stream()
@@ -149,7 +149,7 @@ public class CartServiceImpl implements CartService {
         cartItemRepository.save(cartItem);
         cartRepository.flush();
 
-        return cartRepository.findCartWithItemsAndProductDetailsByUserId(userId)
+        return cartRepository.findCartWithItemsByUserId(userId)
                 .map(this::mapToCartResponse)
                 .orElseGet(this::emptyCartResponse);
     }
@@ -181,7 +181,7 @@ public class CartServiceImpl implements CartService {
         cartItemRepository.deleteByCartIdAndProductId(cart.getCartId(), productId);
         cartRepository.flush();
 
-        return cartRepository.findCartWithItemsAndProductDetailsByUserId(userId)
+        return cartRepository.findCartWithItemsByUserId(userId)
                 .map(this::mapToCartResponse)
                 .orElseGet(this::emptyCartResponse);
     }

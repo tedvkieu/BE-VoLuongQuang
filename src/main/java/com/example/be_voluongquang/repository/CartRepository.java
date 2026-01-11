@@ -31,7 +31,7 @@ public interface CartRepository extends JpaRepository<CartEntity, Integer> {
     /**
      * Tìm cart với cart items
      */
-    @Query("SELECT c FROM cart c LEFT JOIN FETCH c.cartItems ci LEFT JOIN FETCH ci.product WHERE c.user.userId = :userId")
+    @Query("SELECT DISTINCT c FROM cart c LEFT JOIN FETCH c.cartItems ci LEFT JOIN FETCH ci.product WHERE c.user.userId = :userId")
     Optional<CartEntity> findCartWithItemsByUserId(@Param("userId") String userId);
     
     /**

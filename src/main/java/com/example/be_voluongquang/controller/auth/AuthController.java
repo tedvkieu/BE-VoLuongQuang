@@ -1,4 +1,4 @@
-package com.example.be_voluongquang.controller;
+package com.example.be_voluongquang.controller.auth;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

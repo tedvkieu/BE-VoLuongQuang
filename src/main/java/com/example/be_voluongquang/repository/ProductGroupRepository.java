@@ -1,6 +1,8 @@
 package com.example.be_voluongquang.repository;
 
 import com.example.be_voluongquang.entity.ProductGroupEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -26,6 +28,15 @@ public interface ProductGroupRepository extends JpaRepository<ProductGroupEntity
      * Tìm tất cả product group có chứa tên
      */
     List<ProductGroupEntity> findByGroupNameContainingIgnoreCase(String groupName);
+
+    /**
+     * Tìm nhóm theo tên với phân trang
+     */
+    Page<ProductGroupEntity> findByGroupNameContainingIgnoreCase(String groupName, Pageable pageable);
+    /**
+     * Kiểm tra tồn tại product group theo tên (case insensitive)
+     */
+    boolean existsByGroupNameIgnoreCase(String groupName);
     
     /**
      * Tìm product group theo tên chính xác
@@ -50,4 +61,4 @@ public interface ProductGroupRepository extends JpaRepository<ProductGroupEntity
      */
     @Query("SELECT DISTINCT pg FROM product_group pg JOIN pg.products p WHERE p.isActive = true")
     List<ProductGroupEntity> findProductGroupsWithActiveProducts();
-} 
+}

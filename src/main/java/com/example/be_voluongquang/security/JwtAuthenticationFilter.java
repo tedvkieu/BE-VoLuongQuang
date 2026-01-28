@@ -1,8 +1,8 @@
 package com.example.be_voluongquang.security;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Map;
-import java.util.Set;
 
 import org.springframework.http.HttpMethod;
 import org.slf4j.Logger;
@@ -29,36 +29,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     public static final String ATTR_AUTHENTICATED_USER_ID = "authenticatedUserId";
     public static final String ATTR_AUTHENTICATED_ROLE = "authenticatedUserRole";
 
-    private static final Set<String> PUBLIC_ENDPOINTS = Set.of(
-            "/api/auth/login",
-            "/api/auth/register",
-            "/api/auth/me",
-            "/api/product/search",
-            "/api/brand/public");
-
-    private static final Set<String> PUBLIC_GET_PATTERNS = Set.of(
-            "/api/product",
-            "/api/product/**",
-            "/api/category/public/**",
-            "/api/auth/**");
-
-    private static final Set<String> PUBLIC_POST_PATTERNS = Set.of(
-            "/api/product/search",
-            "/api/auth/**");
-
-    private static final Set<String> PUBLIC_ENDPOINT_PATTERNS = Set.of(
-            "/api/product/search",
-            "/api/auth/**");
-
-    private static final Set<String> ADMIN_PROTECTED_PATTERNS = Set.of(
-            "/api/product/**",
-            "/api/brand/**",
-            "/api/category/**",
-            "/api/product-group/**",
-            "/api/discount/**",
-            "/api/admin/**",
-            "/api/user/**");
-
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
     private final JwtUtil jwtUtil;
@@ -82,19 +52,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return true;
         }
 
-        if (PUBLIC_ENDPOINTS.contains(path)) {
-            return true;
-        }
-
-        if (isPublicEndpointPattern(path)) {
-            return true;
-        }
-
-        if (HttpMethod.GET.matches(request.getMethod()) && isPublicGetPath(path)) {
-            return true;
-        }
-
-        if (HttpMethod.POST.matches(request.getMethod()) && isPublicPostPath(path)) {
+        if (isPublicRequest(request)) {
             return true;
         }
 
@@ -127,12 +85,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (role instanceof String && !((String) role).isBlank()) {
                 String normalizedRole = normalizeRole((String) role);
                 request.setAttribute(ATTR_AUTHENTICATED_ROLE, normalizedRole);
-
-                if (requiresPrivileged(request, path) && !isPrivilegedRole(normalizedRole)) {
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    response.getWriter().write("Forbidden: admin or staff required");
-                    return;
-                }
 
                 UsernamePasswordAuthenticationToken authentication = buildAuthentication(sub, normalizedRole);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -175,32 +127,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return false;
     }
 
-    private boolean isPublicGetPath(String path) {
-        return PUBLIC_GET_PATTERNS.stream().anyMatch(pattern -> PATH_MATCHER.match(pattern, path));
-    }
-
-    private boolean isPublicPostPath(String path) {
-        return PUBLIC_POST_PATTERNS.stream().anyMatch(pattern -> PATH_MATCHER.match(pattern, path));
-    }
-
-    private boolean isPublicEndpointPattern(String path) {
-        return PUBLIC_ENDPOINT_PATTERNS.stream().anyMatch(pattern -> PATH_MATCHER.match(pattern, path));
-    }
-
-    private boolean requiresPrivileged(HttpServletRequest request, String path) {
-        // Only enforce for non-GET on protected patterns
-        if (HttpMethod.GET.matches(request.getMethod())) {
+    private boolean isPublicRequest(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        if (path == null) {
             return false;
         }
-        return ADMIN_PROTECTED_PATTERNS.stream().anyMatch(pattern -> PATH_MATCHER.match(pattern, path));
+        return matchesAny(path, ApiAccessRules.PUBLIC_PATTERNS);
     }
 
-    private boolean isAdminRole(String role) {
-        return "ADMIN".equalsIgnoreCase(role);
-    }
-
-    private boolean isPrivilegedRole(String role) {
-        return "ADMIN".equalsIgnoreCase(role) || "STAFF".equalsIgnoreCase(role);
+    private boolean matchesAny(String path, String[] patterns) {
+        if (patterns == null || patterns.length == 0) {
+            return false;
+        }
+        return Arrays.stream(patterns).anyMatch(pattern -> PATH_MATCHER.match(pattern, path));
     }
 
     private String normalizeRole(String rawRole) {

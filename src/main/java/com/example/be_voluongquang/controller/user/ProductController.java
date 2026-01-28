@@ -1,4 +1,4 @@
-package com.example.be_voluongquang.controller;
+package com.example.be_voluongquang.controller.user;
 
 import java.io.IOException;
 import java.util.List;

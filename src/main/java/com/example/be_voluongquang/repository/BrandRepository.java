@@ -1,6 +1,8 @@
 package com.example.be_voluongquang.repository;
 
 import com.example.be_voluongquang.entity.BrandEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -23,10 +25,20 @@ public interface BrandRepository extends JpaRepository<BrandEntity, String> {
     Optional<BrandEntity> findByBrandNameIgnoreCase(String brandName);
     
     /**
+     * Kiểm tra tồn tại brand theo tên (case insensitive)
+     */
+    boolean existsByBrandNameIgnoreCase(String brandName);
+
+    /**
      * Tìm tất cả brand có chứa tên
      */
     List<BrandEntity> findByBrandNameContainingIgnoreCase(String brandName);
-    
+
+    /**
+     * Tìm brand có tên chứa theo pagination
+     */
+    Page<BrandEntity> findByBrandNameContainingIgnoreCase(String brandName, Pageable pageable);
+
     /**
      * Tìm brand theo tên chính xác
      */
@@ -44,4 +56,4 @@ public interface BrandRepository extends JpaRepository<BrandEntity, String> {
      */
     @Query("SELECT b FROM brand b WHERE SIZE(b.products) = (SELECT MAX(SIZE(b2.products)) FROM brand b2)")
     List<BrandEntity> findBrandsWithMostProducts();
-} 
+}

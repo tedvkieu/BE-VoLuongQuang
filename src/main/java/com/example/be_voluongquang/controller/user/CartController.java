@@ -1,4 +1,4 @@
-package com.example.be_voluongquang.controller;
+package com.example.be_voluongquang.controller.user;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;

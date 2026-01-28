@@ -1,6 +1,8 @@
 package com.example.be_voluongquang.repository;
 
 import com.example.be_voluongquang.entity.CategoryEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -26,6 +28,15 @@ public interface CategoryRepository extends JpaRepository<CategoryEntity, String
      * Tìm tất cả category có chứa tên
      */
     List<CategoryEntity> findByCategoryNameContainingIgnoreCase(String categoryName);
+
+    /**
+     * Tìm category theo tên với phân trang
+     */
+    Page<CategoryEntity> findByCategoryNameContainingIgnoreCase(String categoryName, Pageable pageable);
+    /**
+     * Kiểm tra tồn tại category theo tên (case insensitive)
+     */
+    boolean existsByCategoryNameIgnoreCase(String categoryName);
     
     /**
      * Tìm category theo tên chính xác
@@ -50,4 +61,4 @@ public interface CategoryRepository extends JpaRepository<CategoryEntity, String
      */
     @Query("SELECT DISTINCT c FROM category c JOIN c.products p WHERE p.isActive = true")
     List<CategoryEntity> findCategoriesWithActiveProducts();
-} 
+}

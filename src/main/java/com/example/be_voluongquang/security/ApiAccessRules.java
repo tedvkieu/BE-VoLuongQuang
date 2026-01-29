@@ -12,7 +12,8 @@ public final class ApiAccessRules {
             "/api/product/search",
             "/api/category/public",
             "/api/brand/**",
-            "/api/product-group/**"
+            "/api/product-group/**",
+            "/images/**"
     };
 
     public static final String[] AUTHENTICATED_PATTERNS = {

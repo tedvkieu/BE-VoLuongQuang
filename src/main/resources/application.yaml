@@ -29,3 +29,10 @@ app:
     secret: ${JWT_SECRET:dev-secret-change-me-please-32-bytes-minimum}
     access-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:86400000} # 1 day
     refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:1209600000} # 14 days
+cloudflare:
+  r2:
+    endpoint: ${R2_ENDPOINT:https://8d77c873cc0deb1cfdfb8940bc8c96b2.r2.cloudflarestorage.com}
+    access-key: ${R2_ACCESS_KEY:cbf09d564b42208508f96ca80f921f5b}
+    secret-key: ${R2_SECRET_KEY:dfcaf1ea33ea7bd5c5b90df82e8e4b78db1d6357b0e6b7feb2e004e0e3632992}
+    bucket: ${R2_BUCKET:voluongquang}
+    public-base-url: ${R2_PUBLIC_BASE_URL:https://pub-fce6933fdd064ed0a3bce310d02f9752.r2.dev}

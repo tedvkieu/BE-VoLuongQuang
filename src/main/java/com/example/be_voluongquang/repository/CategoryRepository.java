@@ -23,6 +23,10 @@ public interface CategoryRepository extends JpaRepository<CategoryEntity, String
      * Tìm category theo tên (case insensitive)
      */
     Optional<CategoryEntity> findByCategoryNameIgnoreCase(String categoryName);
+
+    Optional<CategoryEntity> findByCategoryNameIgnoreCaseAndIsDeletedFalse(String categoryName);
+
+    List<CategoryEntity> findByIsDeletedFalse();
     
     /**
      * Tìm tất cả category có chứa tên
@@ -33,6 +37,10 @@ public interface CategoryRepository extends JpaRepository<CategoryEntity, String
      * Tìm category theo tên với phân trang
      */
     Page<CategoryEntity> findByCategoryNameContainingIgnoreCase(String categoryName, Pageable pageable);
+
+    Page<CategoryEntity> findByCategoryNameContainingIgnoreCaseAndIsDeleted(String categoryName, Boolean isDeleted, Pageable pageable);
+
+    Page<CategoryEntity> findByIsDeleted(Boolean isDeleted, Pageable pageable);
     /**
      * Kiểm tra tồn tại category theo tên (case insensitive)
      */

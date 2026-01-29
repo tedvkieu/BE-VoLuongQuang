@@ -1,11 +1,13 @@
 package com.example.be_voluongquang.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.Where;
 import lombok.*;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity(name = "cart")
+@Where(clause = "is_deleted = false")
 @Getter
 @Setter
 @Builder

@@ -31,7 +31,7 @@ public class BrandServiceImpl implements BrandService {
 
     @Override
     public List<BrandSimpleDTO> getAllBrands() {
-        List<BrandEntity> brands = brandRepository.findAll();
+        List<BrandEntity> brands = brandRepository.findByIsDeletedFalse();
         return brands.stream()
                 .map(b -> BrandSimpleDTO.builder()
                         .brandId(b.getBrandId())
@@ -44,13 +44,16 @@ public class BrandServiceImpl implements BrandService {
     public BrandResponseDTO getBrandById(String id) {
         BrandEntity brand = brandRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(BRAND_LABEL, "brandId", id));
+        if (Boolean.TRUE.equals(brand.getIsDeleted())) {
+            throw new ResourceNotFoundException(BRAND_LABEL, "brandId", id);
+        }
         return toResponse(brand);
     }
 
     @Override
     public BrandResponseDTO createBrand(BrandRequestDTO request) {
         String brandName = normalizeName(request.getBrandName(), BRAND_LABEL);
-        if (brandRepository.existsByBrandNameIgnoreCase(brandName)) {
+        if (brandRepository.existsByBrandNameIgnoreCaseAndIsDeletedFalse(brandName)) {
             throw new IllegalArgumentException("Brand name already exists");
         }
 
@@ -75,7 +78,7 @@ public class BrandServiceImpl implements BrandService {
         BrandEntity brand = brandRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(BRAND_LABEL, "brandId", id));
 
-        Optional<BrandEntity> existing = brandRepository.findByBrandNameIgnoreCase(brandName);
+        Optional<BrandEntity> existing = brandRepository.findByBrandNameIgnoreCaseAndIsDeletedFalse(brandName);
         if (existing.isPresent() && !existing.get().getBrandId().equals(brand.getBrandId())) {
             throw new IllegalArgumentException("Brand name already exists");
         }
@@ -89,20 +92,23 @@ public class BrandServiceImpl implements BrandService {
     public void deleteBrand(String id) {
         BrandEntity brand = brandRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(BRAND_LABEL, "brandId", id));
-        brandRepository.delete(brand);
+        brand.setIsDeleted(true);
+        brandRepository.save(brand);
     }
 
     @Override
-    public PagedResponse<BrandResponseDTO> getBrandsPage(int page, int size, String search) {
+    public PagedResponse<BrandResponseDTO> getBrandsPage(int page, int size, String search, Boolean isDeleted) {
         int safePage = Math.max(0, page);
         int safeSize = size <= 0 ? 10 : size;
         Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "createdAt"));
 
+        Boolean deletedFilter = isDeleted != null ? isDeleted : Boolean.FALSE;
         Page<BrandEntity> entityPage;
         if (StringUtils.hasText(search)) {
-            entityPage = brandRepository.findByBrandNameContainingIgnoreCase(search.trim(), pageable);
+            entityPage = brandRepository.findByBrandNameContainingIgnoreCaseAndIsDeleted(
+                    search.trim(), deletedFilter, pageable);
         } else {
-            entityPage = brandRepository.findAll(pageable);
+            entityPage = brandRepository.findByIsDeleted(deletedFilter, pageable);
         }
 
         Page<BrandResponseDTO> dtoPage = entityPage.map(this::toResponse);

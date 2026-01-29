@@ -31,7 +31,7 @@ public class ProductGroupServiceImpl implements ProductGroupService {
 
     @Override
     public List<ProductGroupSimpleDTO> getAllProductGroups() {
-        List<ProductGroupEntity> groups = productGroupRepository.findAll();
+        List<ProductGroupEntity> groups = productGroupRepository.findByIsDeletedFalse();
         return groups.stream()
                 .map(g -> ProductGroupSimpleDTO.builder()
                         .groupId(g.getGroupId())
@@ -50,7 +50,7 @@ public class ProductGroupServiceImpl implements ProductGroupService {
     @Override
     public ProductGroupResponseDTO createProductGroup(ProductGroupRequestDTO request) {
         String groupName = normalizeName(request.getGroupName(), PRODUCT_GROUP_LABEL);
-        if (productGroupRepository.existsByGroupNameIgnoreCase(groupName)) {
+        if (productGroupRepository.findByGroupNameIgnoreCaseAndIsDeletedFalse(groupName).isPresent()) {
             throw new IllegalArgumentException("Product group name already exists");
         }
 
@@ -75,7 +75,7 @@ public class ProductGroupServiceImpl implements ProductGroupService {
         ProductGroupEntity group = productGroupRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(PRODUCT_GROUP_LABEL, "groupId", id));
 
-        Optional<ProductGroupEntity> existing = productGroupRepository.findByGroupNameIgnoreCase(groupName);
+        Optional<ProductGroupEntity> existing = productGroupRepository.findByGroupNameIgnoreCaseAndIsDeletedFalse(groupName);
         if (existing.isPresent() && !existing.get().getGroupId().equals(group.getGroupId())) {
             throw new IllegalArgumentException("Product group name already exists");
         }
@@ -89,20 +89,23 @@ public class ProductGroupServiceImpl implements ProductGroupService {
     public void deleteProductGroup(String id) {
         ProductGroupEntity group = productGroupRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(PRODUCT_GROUP_LABEL, "groupId", id));
-        productGroupRepository.delete(group);
+        group.setIsDeleted(true);
+        productGroupRepository.save(group);
     }
 
     @Override
-    public PagedResponse<ProductGroupResponseDTO> getProductGroupsPage(int page, int size, String search) {
+    public PagedResponse<ProductGroupResponseDTO> getProductGroupsPage(int page, int size, String search, Boolean isDeleted) {
         int safePage = Math.max(0, page);
         int safeSize = size <= 0 ? 10 : size;
         Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "createdAt"));
 
+        Boolean deletedFilter = isDeleted != null ? isDeleted : Boolean.FALSE;
         Page<ProductGroupEntity> entityPage;
         if (StringUtils.hasText(search)) {
-            entityPage = productGroupRepository.findByGroupNameContainingIgnoreCase(search.trim(), pageable);
+            entityPage = productGroupRepository.findByGroupNameContainingIgnoreCaseAndIsDeleted(
+                    search.trim(), deletedFilter, pageable);
         } else {
-            entityPage = productGroupRepository.findAll(pageable);
+            entityPage = productGroupRepository.findByIsDeleted(deletedFilter, pageable);
         }
 
         Page<ProductGroupResponseDTO> dtoPage = entityPage.map(this::toResponse);

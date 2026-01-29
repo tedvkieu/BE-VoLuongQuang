@@ -17,5 +17,5 @@ public interface CategoryService {
 
     void deleteCategory(String id);
 
-    PagedResponse<CategoryResponseDTO> getCategoriesPage(int page, int size, String search);
+    PagedResponse<CategoryResponseDTO> getCategoriesPage(int page, int size, String search, Boolean isDeleted);
 }

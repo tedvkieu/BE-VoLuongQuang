@@ -48,8 +48,6 @@ public class ProductController {
             @RequestParam(name = "size", required = false, defaultValue = "15") Integer size,
             @RequestParam(name = "search", required = false) String search) {
 
-        System.out.println("product pages called");
-        // Trả về phân trang (Page) theo ngày tạo mới nhất; hỗ trợ tìm kiếm
         return ResponseEntity.ok(productService.getProductsPaged(page, size, search));
     }
 
@@ -97,10 +95,6 @@ public class ProductController {
     public ResponseEntity<?> createAProduct(
             @RequestPart(value = "images", required = false) MultipartFile[] images,
             @RequestPart(value = "product") ProductRequestDTO product) {
-
-        System.out.println("checck imageS: " + images);
-        System.out.println("check product: " + product);
-
         ProductResponseDTO savedProduct = productService.createAProduct(images, product);
         return ResponseEntity.ok(savedProduct);
     }
@@ -120,8 +114,6 @@ public class ProductController {
             @RequestPart(value = "images", required = false) MultipartFile[] images,
             @RequestPart(value = "product") ProductRequestDTO product) {
 
-        System.out.println("checck imageS: " + images);
-        System.out.println("check product: " + product);
         ProductResponseDTO savedProduct = productService.updateAProduct(id, images, product);
         return ResponseEntity.ok(savedProduct);
     }

@@ -5,8 +5,6 @@ import java.util.Arrays;
 import java.util.Map;
 
 import org.springframework.http.HttpMethod;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,8 +20,6 @@ import org.springframework.util.AntPathMatcher;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-
-    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     public static final String ATTR_AUTHENTICATED_CLAIMS = "authenticatedClaims";
     public static final String ATTR_AUTHENTICATED_USER_ID = "authenticatedUserId";
@@ -65,8 +61,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         String token = extractToken(request);
         if (token == null || token.isBlank()) {
-            log.info("JWT filter blocked request - missing token. path={}, method={}, hasAuthHeader={}, hasAccessTokenCookie={}",
-                    path, request.getMethod(), request.getHeader("Authorization") != null, hasAccessTokenCookie(request));
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("Unauthorized");
             return;
@@ -90,7 +84,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception ex) {
-            log.warn("JWT parsing failed for path={}, method={}: {}", path, request.getMethod(), ex.getMessage());
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("Invalid token");
             return;

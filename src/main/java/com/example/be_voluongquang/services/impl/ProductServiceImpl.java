@@ -31,11 +31,13 @@ import com.example.be_voluongquang.entity.BrandEntity;
 import com.example.be_voluongquang.entity.CategoryEntity;
 import com.example.be_voluongquang.entity.ProductEntity;
 import com.example.be_voluongquang.entity.ProductGroupEntity;
+import com.example.be_voluongquang.entity.FileArchivalEntity;
 import com.example.be_voluongquang.exception.ProductAlreadyExistsException;
 import com.example.be_voluongquang.exception.ResourceNotFoundException;
 import com.example.be_voluongquang.mapper.ProductMapper;
 import com.example.be_voluongquang.repository.BrandRepository;
 import com.example.be_voluongquang.repository.CategoryRepository;
+import com.example.be_voluongquang.repository.FileArchivalRepository;
 import com.example.be_voluongquang.repository.ProductGroupRepository;
 import com.example.be_voluongquang.repository.ProductRepository;
 import com.example.be_voluongquang.services.ProductService;
@@ -67,17 +69,23 @@ public class ProductServiceImpl implements ProductService {
     private final BrandRepository brandRepository;
     private final ProductGroupRepository productGroupRepository;
     private final UploadImgImgService uploadImgImgService;
+    private final FileArchivalRepository fileArchivalRepository;
+    private final ImageNamingUtil imageNamingUtil;
 
     public ProductServiceImpl(ProductRepository productRepository,
             CategoryRepository categoryRepository,
             BrandRepository brandRepository,
             ProductGroupRepository productGroupRepository,
-            UploadImgImgService uploadImgImgService) {
+            UploadImgImgService uploadImgImgService,
+            FileArchivalRepository fileArchivalRepository,
+            ImageNamingUtil imageNamingUtil) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.brandRepository = brandRepository;
         this.productGroupRepository = productGroupRepository;
         this.uploadImgImgService = uploadImgImgService;
+        this.fileArchivalRepository = fileArchivalRepository;
+        this.imageNamingUtil = imageNamingUtil;
     }
 
     // Service Impl for GET Method -----------------------------------------
@@ -118,9 +126,6 @@ public class ProductServiceImpl implements ProductService {
             entityPage = productRepository.findAll(pageable);
         }
 
-        log.info("[getProductsPaged] page={}, size={}, search='{}', total={}",
-                safePage, safeSize, search, entityPage.getTotalElements());
-
         return entityPage.map(productMapper::toDTO);
     }
 
@@ -150,8 +155,7 @@ public class ProductServiceImpl implements ProductService {
 
         Specification<ProductEntity> specification = buildProductSpecification(request);
         Page<ProductEntity> entityPage = productRepository.findAll(specification, pageable);
-        log.info("[searchProducts] page={}, size={}, search='{}', total={}",
-                safePage, safeSize, request.getSearch(), entityPage.getTotalElements());
+
         return entityPage.map(productMapper::toDTO);
     }
 
@@ -277,24 +281,6 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public ProductResponseDTO createAProduct(MultipartFile[] images, ProductRequestDTO dto) {
 
-        log.info("=== DEBUG: Starting createAProduct ===");
-        log.info("Product DTO: {}", dto);
-
-        if (images != null) {
-            log.info("Number of images received: {}", images.length);
-            for (int i = 0; i < images.length; i++) {
-                MultipartFile img = images[i];
-                if (img != null) {
-                    log.info("Image[{}]: name={}, size={}, contentType={}, isEmpty={}",
-                            i, img.getOriginalFilename(), img.getSize(), img.getContentType(), img.isEmpty());
-                } else {
-                    log.info("Image[{}]: null", i);
-                }
-            }
-        } else {
-            log.info("Images array is null");
-        }
-
         if (dto.getProductId() != null && !dto.getProductId().trim().isEmpty()) {
             if (productRepository.existsById(dto.getProductId())) {
                 throw new ProductAlreadyExistsException(dto.getProductId());
@@ -314,62 +300,47 @@ public class ProductServiceImpl implements ProductService {
         }
 
         ProductGroupEntity productGroup = null;
-        if (dto.getProductGroupId() != null) {
-            productGroup = productGroupRepository.findById(dto.getProductGroupId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Product Group", "productGroupId",
-                            dto.getProductGroupId()));
+        if (StringUtils.hasText(dto.getProductGroupId())) {
+            String groupId = dto.getProductGroupId().trim();
+            productGroup = productGroupRepository.findById(groupId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Product Group", "groupId", groupId));
         }
 
         // --- Upload nhiều ảnh (nếu có) ---
         String imageUrl = null;
         if (images != null && images.length > 0) {
-            log.info("=== DEBUG: Starting image upload process ===");
             StringBuilder imageUrls = new StringBuilder();
-            String finalPath = "images/product/" + ImageNamingUtil.getFolderByCategoryId(dto.getCategoryId());
-            log.info("Final path for images: {}", finalPath);
+            String finalPath = "images/product/" + imageNamingUtil.getFolderByCategoryId(dto.getCategoryId());
 
             for (int i = 0; i < images.length; i++) {
                 MultipartFile image = images[i];
-                log.info("Processing image[{}]: {}", i, image != null ? image.getOriginalFilename() : "null");
 
                 if (image != null && !image.isEmpty()) {
                     try {
-                        log.info("Uploading image[{}]: {}", i, image.getOriginalFilename());
                         String nameImg = uploadImgImgService.handleSaveUploadFile(image, finalPath);
-                        log.info("Uploaded image name: {}", nameImg);
 
-                        String finalImage = ImageNamingUtil.buildFinalImagePath(nameImg, dto.getCategoryId());
-                        log.info("Final image path: {}", finalImage);
+                        String finalImage = normalizeUploadedImage(nameImg, dto.getCategoryId());
 
                         if (i > 0) {
                             imageUrls.append(",");
                         }
                         imageUrls.append(finalImage);
-                        log.info("Current imageUrls string: {}", imageUrls.toString());
                     } catch (Exception e) {
                         log.error("Error uploading image[{}]: {}", i, e.getMessage(), e);
                     }
-                } else {
-                    log.info("Skipping image[{}]: null or empty", i);
                 }
             }
 
             if (imageUrls.length() > 0) {
                 imageUrl = imageUrls.toString();
-                log.info("Final imageUrl: {}", imageUrl);
-            } else {
-                log.info("No valid images were uploaded");
             }
-        } else {
-            log.info("No images provided or images array is empty");
         }
 
-        log.info("Creating product with imageUrl: {}", imageUrl);
         ProductEntity product = ProductMapper.toEntity(dto, brand, category, productGroup, imageUrl);
-        productRepository.save(product);
+        ProductEntity savedProduct = productRepository.save(product);
+        syncFileArchivals(savedProduct, imageUrl);
 
-        log.info("Product saved successfully with ID: {}", product.getProductId());
-        return productMapper.toDTO(product);
+        return productMapper.toDTO(savedProduct);
     }
 
     @Override
@@ -440,31 +411,9 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponseDTO updateAProduct(String id, MultipartFile[] images, ProductRequestDTO dto) {
-        log.info("=== DEBUG: Starting updateAProduct ===");
-        log.info("Product ID: {}", id);
-        log.info("ImageUrl from DTO (existing images to keep): {}", dto.getImageUrl());
-
-        if (images != null) {
-            log.info("Number of new images to upload: {}", images.length);
-            for (int i = 0; i < images.length; i++) {
-                MultipartFile img = images[i];
-                if (img != null && !img.isEmpty()) {
-                    log.info("New image[{}]: name={}, size={}, contentType={}",
-                            i, img.getOriginalFilename(), img.getSize(), img.getContentType());
-                } else {
-                    log.info("New image[{}]: null or empty", i);
-                }
-            }
-        } else {
-            log.info("No new images to upload");
-        }
-
         // Kiểm tra product có tồn tại không trước khi update
         ProductEntity existingProduct = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", id));
-
-        log.info("Existing product found: {}", existingProduct.getProductId());
-        log.info("Current product imageUrl in DB: {}", existingProduct.getImageUrl());
 
         // Validate related entities using DTO if provided; otherwise keep existing
         BrandEntity brand = null;
@@ -484,10 +433,10 @@ public class ProductServiceImpl implements ProductService {
         }
 
         ProductGroupEntity productGroup = null;
-        if (dto.getProductGroupId() != null && !dto.getProductGroupId().trim().isEmpty()) {
-            productGroup = productGroupRepository.findById(dto.getProductGroupId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Product Group", "productGroupId",
-                            dto.getProductGroupId()));
+        if (StringUtils.hasText(dto.getProductGroupId())) {
+            String groupId = dto.getProductGroupId().trim();
+            productGroup = productGroupRepository.findById(groupId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Product Group", "groupId", groupId));
         } else {
             productGroup = existingProduct.getProductGroup();
         }
@@ -499,7 +448,10 @@ public class ProductServiceImpl implements ProductService {
                         : (existingProduct.getCategory() != null ? existingProduct.getCategory().getCategoryId()
                                 : null));
 
-        log.info("Final imageUrl after processing: {}", finalImageUrl);
+        if (!StringUtils.hasText(finalImageUrl)) {
+
+            finalImageUrl = existingProduct.getImageUrl();
+        }
 
         // Cập nhật thông tin product
         ProductEntity updatedProduct = ProductMapper.toEntity(dto, brand, category, productGroup, finalImageUrl);
@@ -516,9 +468,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         ProductEntity savedProduct = productRepository.save(updatedProduct);
-
-        log.info("Product updated successfully with ID: {}", savedProduct.getProductId());
-        log.info("Final saved product imageUrl: {}", savedProduct.getImageUrl());
+        syncFileArchivals(savedProduct, finalImageUrl);
 
         return productMapper.toDTO(savedProduct);
     }
@@ -553,20 +503,17 @@ public class ProductServiceImpl implements ProductService {
      * @return String cuối cùng chứa tất cả path ảnh (cũ + mới) theo thứ tự
      */
     private String processImageUpdate(String finalOrderFromFE, MultipartFile[] newImages, String categoryId) {
-        log.info("=== PROCESSING IMAGE UPDATE (ORDER AWARE) === Final order from FE: {}", finalOrderFromFE);
-
         // 1) Upload new images and collect their final paths
         List<String> newImagePaths = new ArrayList<>();
         if (newImages != null && newImages.length > 0) {
-            String uploadPath = "images/product/" + ImageNamingUtil.getFolderByCategoryId(categoryId);
+            String uploadPath = "images/product/" + imageNamingUtil.getFolderByCategoryId(categoryId);
             for (int i = 0; i < newImages.length; i++) {
                 MultipartFile image = newImages[i];
                 if (image != null && !image.isEmpty()) {
                     try {
                         String savedFileName = uploadImgImgService.handleSaveUploadFile(image, uploadPath);
-                        String newImagePath = ImageNamingUtil.buildFinalImagePath(savedFileName, categoryId);
+                        String newImagePath = normalizeUploadedImage(savedFileName, categoryId);
                         newImagePaths.add(newImagePath);
-                        log.info("Uploaded new image[{}] as {}", i, newImagePath);
                     } catch (Exception e) {
                         log.error("Error uploading new image[{}]: {}", i, e.getMessage(), e);
                     }
@@ -577,7 +524,6 @@ public class ProductServiceImpl implements ProductService {
         // 2) Build final order based on FE sequence (existing paths + NEW_IMAGE_i
         // placeholders)
         if (finalOrderFromFE == null || finalOrderFromFE.trim().isEmpty()) {
-            log.warn("No final order provided by FE; returning only newly uploaded paths.");
             return String.join(",", newImagePaths);
         }
 
@@ -603,40 +549,53 @@ public class ProductServiceImpl implements ProductService {
         }
 
         String finalJoined = String.join(",", result);
-        log.info("Final processed imageUrl (ordered): {}", finalJoined);
         return finalJoined;
     }
 
-    /**
-     * Utility method để clean up các ảnh không còn được sử dụng (optional)
-     * Gọi method này để xóa các file ảnh cũ không còn được reference
-     */
-    private void cleanupUnusedImages(String oldImageUrl, String newImageUrl) {
-        if (oldImageUrl == null || oldImageUrl.trim().isEmpty()) {
+    private void syncFileArchivals(ProductEntity product, String imageUrl) {
+        if (product == null || product.getProductId() == null) {
             return;
         }
 
-        Set<String> oldPaths = new HashSet<>(Arrays.asList(oldImageUrl.split(",")));
-        Set<String> newPaths = new HashSet<>();
+        fileArchivalRepository.deleteByProduct_ProductId(product.getProductId());
 
-        if (newImageUrl != null && !newImageUrl.trim().isEmpty()) {
-            newPaths.addAll(Arrays.asList(newImageUrl.split(",")));
+        if (!StringUtils.hasText(imageUrl)) {
+            return;
         }
 
-        // Tìm các ảnh cũ không còn được sử dụng
-        Set<String> imagesToDelete = new HashSet<>(oldPaths);
-        imagesToDelete.removeAll(newPaths);
-
-        // Xóa các file không còn sử dụng
-        for (String imagePath : imagesToDelete) {
-            try {
-                // Implement logic xóa file vật lý nếu cần
-                log.info("Should delete unused image: {}", imagePath);
-                // fileService.deleteFile(imagePath);
-            } catch (Exception e) {
-                log.warn("Failed to delete unused image {}: {}", imagePath, e.getMessage());
+        String[] parts = imageUrl.split(",");
+        List<FileArchivalEntity> entries = new ArrayList<>();
+        for (String raw : parts) {
+            String trimmed = raw.trim();
+            if (trimmed.isEmpty()) {
+                continue;
             }
+            FileArchivalEntity file = FileArchivalEntity.builder()
+                    .fileId(java.util.UUID.randomUUID().toString())
+                    .fileUrl(trimmed)
+                    .storageProvider("R2")
+                    .product(product)
+                    .build();
+            entries.add(file);
         }
+
+        if (!entries.isEmpty()) {
+            fileArchivalRepository.saveAll(entries);
+        }
+    }
+
+    private String normalizeUploadedImage(String uploaded, String categoryId) {
+        if (!StringUtils.hasText(uploaded)) {
+            return uploaded;
+        }
+        String trimmed = uploaded.trim();
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+            return trimmed;
+        }
+        if (trimmed.contains("/")) {
+            return trimmed;
+        }
+        return imageNamingUtil.buildFinalImagePath(trimmed, categoryId);
     }
 
     // Service Impl for PUT Method -----------------------------------------
@@ -644,20 +603,14 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponseDTO deleteAProduct(String id) {
-        log.info("=== DEBUG: Starting deleteAProduct ===");
-        log.info("Product ID to delete: {}", id);
-
         // Kiểm tra product có tồn tại không trước khi xóa
         ProductEntity existingProduct = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", id));
 
-        log.info("Existing product found: {}", existingProduct.getProductId());
+        existingProduct.setIsDeleted(true);
+        ProductEntity saved = productRepository.save(existingProduct);
 
-        // Xóa sản phẩm
-        productRepository.delete(existingProduct);
-        log.info("Product deleted successfully with ID: {}", id);
-
-        return productMapper.toDTO(existingProduct);
+        return productMapper.toDTO(saved);
     }
 
     @Override

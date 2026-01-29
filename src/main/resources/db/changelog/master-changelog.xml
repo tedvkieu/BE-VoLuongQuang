@@ -7,4 +7,8 @@
 	<!-- Nếu cần thêm file -->
 	<include file="002-seed-data.xml" relativeToChangelogFile="true" />
 	<include file="003-allow-staff-role.xml" relativeToChangelogFile="true" />
+	<include file="004-file-archival.xml" relativeToChangelogFile="true" />
+	<include file="005-category-code.xml" relativeToChangelogFile="true" />
+	<include file="006-category-code-seed.xml" relativeToChangelogFile="true" />
+	<include file="007-add-baseentity-fields.xml" relativeToChangelogFile="true" />
 </databaseChangeLog>

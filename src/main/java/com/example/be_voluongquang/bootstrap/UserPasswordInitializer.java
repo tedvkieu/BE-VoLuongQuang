@@ -35,7 +35,7 @@ public class UserPasswordInitializer {
         }
         if (updated > 0) {
             userRepository.saveAll(users);
-            log.info("Initialized/hashed passwords for {} user(s)", updated);
+           
         } else {
             log.info("All user passwords already hashed. No action taken.");
         }

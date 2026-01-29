@@ -31,11 +31,12 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public List<CategorySimpleDTO> getAllCategories() {
-        List<CategoryEntity> categories = categoryRepository.findAll();
+        List<CategoryEntity> categories = categoryRepository.findByIsDeletedFalse();
         return categories.stream()
                 .map(c -> CategorySimpleDTO.builder()
                         .categoryId(c.getCategoryId())
                         .categoryName(c.getCategoryName())
+                        .categoryCode(c.getCategoryCode())
                         .build())
                 .collect(Collectors.toList());
     }
@@ -50,7 +51,8 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     public CategoryResponseDTO createCategory(CategoryRequestDTO request) {
         String categoryName = normalizeName(request.getCategoryName(), CATEGORY_LABEL);
-        if (categoryRepository.existsByCategoryNameIgnoreCase(categoryName)) {
+        String categoryCode = normalizeCode(request.getCategoryCode());
+        if (categoryRepository.findByCategoryNameIgnoreCaseAndIsDeletedFalse(categoryName).isPresent()) {
             throw new IllegalArgumentException("Category name already exists");
         }
 
@@ -62,6 +64,7 @@ public class CategoryServiceImpl implements CategoryService {
         CategoryEntity category = CategoryEntity.builder()
                 .categoryId(categoryId)
                 .categoryName(categoryName)
+                .categoryCode(categoryCode)
                 .build();
 
         return toResponse(categoryRepository.save(category));
@@ -71,16 +74,18 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public CategoryResponseDTO updateCategory(String id, CategoryRequestDTO request) {
         String categoryName = normalizeName(request.getCategoryName(), CATEGORY_LABEL);
+        String categoryCode = normalizeCode(request.getCategoryCode());
 
         CategoryEntity category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(CATEGORY_LABEL, "categoryId", id));
 
-        Optional<CategoryEntity> existing = categoryRepository.findByCategoryNameIgnoreCase(categoryName);
+        Optional<CategoryEntity> existing = categoryRepository.findByCategoryNameIgnoreCaseAndIsDeletedFalse(categoryName);
         if (existing.isPresent() && !existing.get().getCategoryId().equals(category.getCategoryId())) {
             throw new IllegalArgumentException("Category name already exists");
         }
 
         category.setCategoryName(categoryName);
+        category.setCategoryCode(categoryCode);
         return toResponse(categoryRepository.save(category));
     }
 
@@ -89,20 +94,23 @@ public class CategoryServiceImpl implements CategoryService {
     public void deleteCategory(String id) {
         CategoryEntity category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(CATEGORY_LABEL, "categoryId", id));
-        categoryRepository.delete(category);
+        category.setIsDeleted(true);
+        categoryRepository.save(category);
     }
 
     @Override
-    public PagedResponse<CategoryResponseDTO> getCategoriesPage(int page, int size, String search) {
+    public PagedResponse<CategoryResponseDTO> getCategoriesPage(int page, int size, String search, Boolean isDeleted) {
         int safePage = Math.max(0, page);
         int safeSize = size <= 0 ? 10 : size;
         Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "createdAt"));
 
+        Boolean deletedFilter = isDeleted != null ? isDeleted : Boolean.FALSE;
         Page<CategoryEntity> entityPage;
         if (StringUtils.hasText(search)) {
-            entityPage = categoryRepository.findByCategoryNameContainingIgnoreCase(search.trim(), pageable);
+            entityPage = categoryRepository.findByCategoryNameContainingIgnoreCaseAndIsDeleted(
+                    search.trim(), deletedFilter, pageable);
         } else {
-            entityPage = categoryRepository.findAll(pageable);
+            entityPage = categoryRepository.findByIsDeleted(deletedFilter, pageable);
         }
 
         Page<CategoryResponseDTO> dtoPage = entityPage.map(this::toResponse);
@@ -113,6 +121,7 @@ public class CategoryServiceImpl implements CategoryService {
         return CategoryResponseDTO.builder()
                 .categoryId(entity.getCategoryId())
                 .categoryName(entity.getCategoryName())
+                .categoryCode(entity.getCategoryCode())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .build();
@@ -123,6 +132,17 @@ public class CategoryServiceImpl implements CategoryService {
             throw new IllegalArgumentException(label + " name is required");
         }
         return raw.trim();
+    }
+
+    private String normalizeCode(String raw) {
+        if (raw == null || raw.trim().isEmpty()) {
+            throw new IllegalArgumentException("Category code is required");
+        }
+        String normalized = raw.trim();
+        if (!normalized.matches("^[a-z0-9_]+$")) {
+            throw new IllegalArgumentException("Category code must be lowercase and contain only letters, numbers, or underscore");
+        }
+        return normalized;
     }
 
     private String resolveId(String providedId) {

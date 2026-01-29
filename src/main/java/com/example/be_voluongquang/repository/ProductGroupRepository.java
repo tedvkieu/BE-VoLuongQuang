@@ -23,6 +23,10 @@ public interface ProductGroupRepository extends JpaRepository<ProductGroupEntity
      * Tìm product group theo tên (case insensitive)
      */
     Optional<ProductGroupEntity> findByGroupNameIgnoreCase(String groupName);
+
+    Optional<ProductGroupEntity> findByGroupNameIgnoreCaseAndIsDeletedFalse(String groupName);
+
+    List<ProductGroupEntity> findByIsDeletedFalse();
     
     /**
      * Tìm tất cả product group có chứa tên
@@ -33,6 +37,10 @@ public interface ProductGroupRepository extends JpaRepository<ProductGroupEntity
      * Tìm nhóm theo tên với phân trang
      */
     Page<ProductGroupEntity> findByGroupNameContainingIgnoreCase(String groupName, Pageable pageable);
+
+    Page<ProductGroupEntity> findByGroupNameContainingIgnoreCaseAndIsDeleted(String groupName, Boolean isDeleted, Pageable pageable);
+
+    Page<ProductGroupEntity> findByIsDeleted(Boolean isDeleted, Pageable pageable);
     /**
      * Kiểm tra tồn tại product group theo tên (case insensitive)
      */

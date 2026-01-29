@@ -17,5 +17,5 @@ public interface BrandService {
 
     void deleteBrand(String id);
 
-    PagedResponse<BrandResponseDTO> getBrandsPage(int page, int size, String search);
+    PagedResponse<BrandResponseDTO> getBrandsPage(int page, int size, String search, Boolean isDeleted);
 }

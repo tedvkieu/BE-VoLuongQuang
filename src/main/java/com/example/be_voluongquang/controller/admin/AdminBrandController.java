@@ -37,11 +37,12 @@ public class AdminBrandController {
     public PagedResponse<BrandResponseDTO> getBrands(
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size,
-            @RequestParam(required = false) String search) {
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Boolean isDeleted) {
 
         int safePage = page != null && page >= 0 ? page : 0;
         int safeSize = size != null && size > 0 ? size : 10;
-        return brandService.getBrandsPage(safePage, safeSize, search);
+        return brandService.getBrandsPage(safePage, safeSize, search, isDeleted);
     }
 
     @GetMapping("/{id}")

@@ -1,5 +1,6 @@
 package com.example.be_voluongquang.configuation;
 
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
@@ -12,6 +13,7 @@ import org.springframework.web.servlet.view.InternalResourceViewResolver;
 import org.springframework.web.servlet.view.JstlView;
 
 @Configuration
+@EnableConfigurationProperties(CloudflareProperties.class)
 @EnableWebMvc
 public class AppConfig implements WebMvcConfigurer {
 
@@ -34,22 +36,7 @@ public class AppConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/css/**").addResourceLocations("/resources/css/");
 
         registry.addResourceHandler("/images/**")
-                .addResourceLocations("file:uploads/images/**");
-
-        registry.addResourceHandler("/images/product/cool_prd/**")
-                .addResourceLocations("file:uploads/images/product/cool_prd/");
-
-                registry.addResourceHandler("/images/product/snack/**")
-                .addResourceLocations("file:uploads/images/product/snack/");
-
-                registry.addResourceHandler("/images/product/dry_prd/**")
-                .addResourceLocations("file:uploads/images/product/dry_prd/");
-
-                registry.addResourceHandler("/images/product/spice/**")
-                .addResourceLocations("file:uploads/images/product/spice/");
-
-                registry.addResourceHandler("/images/product/other/**")
-                .addResourceLocations("file:uploads/images/product/other/");
+                .addResourceLocations("file:uploads/images/");
 
     }
 

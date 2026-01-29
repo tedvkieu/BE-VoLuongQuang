@@ -1,49 +1,78 @@
 package com.example.be_voluongquang.services.app;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import jakarta.servlet.ServletContext;
+import java.time.Instant;
+import java.util.UUID;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import lombok.RequiredArgsConstructor;
+
 import com.example.be_voluongquang.exception.FileUploadException;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Service
+@RequiredArgsConstructor
 public class UploadImgImgService {
-    private final ServletContext servletContext;
+    private final S3Client s3Client;
 
-    public UploadImgImgService(ServletContext servletContext) {
-        this.servletContext = servletContext;
-    }
+    @Value("${cloudflare.r2.bucket}")
+    private String bucketName;
+
+    @Value("${cloudflare.r2.endpoint}")
+    private String endpoint;
+
+    @Value("${cloudflare.r2.public-base-url}")
+    private String publicBaseUrl;
 
     public String handleSaveUploadFile(MultipartFile file, String targetFolder) {
         if (file.isEmpty()) {
             return "";
         }
-        // String rootPath = this.servletContext.getRealPath("/resources/images");
-        String rootPath = System.getProperty("user.dir") + "/uploads";
-
-        String finalName = "";
-        try {
-            byte[] bytes;
-            bytes = file.getBytes();
-
-            File dir = new File(rootPath + File.separator + targetFolder);
-            if (!dir.exists())
-                dir.mkdirs();
-
-            finalName = System.currentTimeMillis() + "-" + file.getOriginalFilename();
-            File serverFile = new File(dir.getAbsolutePath() + File.separator + finalName);
-            BufferedOutputStream stream = new BufferedOutputStream(
-                    new FileOutputStream(serverFile));
-            stream.write(bytes);
-            stream.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw new FileUploadException("Failed to save file: " + e.getMessage(), e);
+        if (!StringUtils.hasText(bucketName)) {
+            throw new FileUploadException("R2 bucket is missing. Please set cloudflare.r2.bucket.");
         }
-        return finalName;
+
+        String originalName = file.getOriginalFilename();
+        String safeName = StringUtils.hasText(originalName) ? originalName.trim() : "upload";
+        String uniquePrefix = Instant.now().toEpochMilli() + "-" + UUID.randomUUID();
+        String finalName = uniquePrefix + "-" + safeName;
+
+        String folder = StringUtils.hasText(targetFolder) ? targetFolder.trim() : "";
+        String objectKey = folder.isEmpty() ? finalName : folder + "/" + finalName;
+
+        try {
+            byte[] bytes = file.getBytes();
+            PutObjectRequest request = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(objectKey)
+                    .contentType(file.getContentType())
+                    .build();
+
+            s3Client.putObject(request, RequestBody.fromBytes(bytes));
+            return buildPublicUrl(objectKey);
+        } catch (IOException e) {
+            throw new FileUploadException("Failed to upload file: " + e.getMessage(), e);
+        } catch (Exception e) {
+            throw new FileUploadException("Failed to upload file to R2: " + e.getMessage(), e);
+        }
+    }
+
+    private String buildPublicUrl(String objectKey) {
+        String base = StringUtils.hasText(publicBaseUrl) ? publicBaseUrl : endpoint;
+        if (!StringUtils.hasText(base)) {
+            // last resort: return key only
+            return objectKey;
+        }
+
+        String cleanEndpoint = StringUtils.trimTrailingCharacter(
+                StringUtils.trimWhitespace(base), '/');
+        String cleanKey = StringUtils.trimLeadingCharacter(objectKey, '/');
+        return cleanEndpoint + "/" + cleanKey;
     }
 }

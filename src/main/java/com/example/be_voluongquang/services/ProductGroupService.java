@@ -17,5 +17,5 @@ public interface ProductGroupService {
 
     void deleteProductGroup(String id);
 
-    PagedResponse<ProductGroupResponseDTO> getProductGroupsPage(int page, int size, String search);
+    PagedResponse<ProductGroupResponseDTO> getProductGroupsPage(int page, int size, String search, Boolean isDeleted);
 }

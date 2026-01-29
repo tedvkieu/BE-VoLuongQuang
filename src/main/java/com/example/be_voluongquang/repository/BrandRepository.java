@@ -23,11 +23,17 @@ public interface BrandRepository extends JpaRepository<BrandEntity, String> {
      * Tìm brand theo tên (case insensitive)
      */
     Optional<BrandEntity> findByBrandNameIgnoreCase(String brandName);
+
+    Optional<BrandEntity> findByBrandNameIgnoreCaseAndIsDeletedFalse(String brandName);
     
     /**
      * Kiểm tra tồn tại brand theo tên (case insensitive)
      */
     boolean existsByBrandNameIgnoreCase(String brandName);
+
+    boolean existsByBrandNameIgnoreCaseAndIsDeletedFalse(String brandName);
+
+    List<BrandEntity> findByIsDeletedFalse();
 
     /**
      * Tìm tất cả brand có chứa tên
@@ -38,6 +44,10 @@ public interface BrandRepository extends JpaRepository<BrandEntity, String> {
      * Tìm brand có tên chứa theo pagination
      */
     Page<BrandEntity> findByBrandNameContainingIgnoreCase(String brandName, Pageable pageable);
+
+    Page<BrandEntity> findByBrandNameContainingIgnoreCaseAndIsDeleted(String brandName, Boolean isDeleted, Pageable pageable);
+
+    Page<BrandEntity> findByIsDeleted(Boolean isDeleted, Pageable pageable);
 
     /**
      * Tìm brand theo tên chính xác

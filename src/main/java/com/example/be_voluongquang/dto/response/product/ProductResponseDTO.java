@@ -29,4 +29,5 @@ public class ProductResponseDTO {
     private String productGroupId;
     private String categoryId;
     private String brandId;
+    private Boolean isDeleted;
 }

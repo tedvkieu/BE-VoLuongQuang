@@ -94,6 +94,26 @@ public class ProductGroupServiceImpl implements ProductGroupService {
     }
 
     @Override
+    @Transactional
+    public ProductGroupResponseDTO restoreProductGroup(String id) {
+        ProductGroupEntity group = productGroupRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(PRODUCT_GROUP_LABEL, "groupId", id));
+        
+        if (Boolean.FALSE.equals(group.getIsDeleted())) {
+            return toResponse(group);
+        }
+
+        group.setIsDeleted(false);
+        int updated = productGroupRepository.softRestoreById(id);
+        if (updated == 0) {
+            group.setIsDeleted(false);
+            productGroupRepository.save(group);
+        }
+        
+        return toResponse(group);
+    }
+
+    @Override
     public PagedResponse<ProductGroupResponseDTO> getProductGroupsPage(int page, int size, String search, Boolean isDeleted) {
         int safePage = Math.max(0, page);
         int safeSize = size <= 0 ? 10 : size;
@@ -117,7 +137,9 @@ public class ProductGroupServiceImpl implements ProductGroupService {
                 .groupId(entity.getGroupId())
                 .groupName(entity.getGroupName())
                 .createdAt(entity.getCreatedAt())
+                .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
+                .isDeleted(entity.getIsDeleted())
                 .build();
     }
 

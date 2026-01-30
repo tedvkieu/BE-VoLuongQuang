@@ -22,4 +22,6 @@ public class CategoryResponseDTO {
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime updatedAt;
+
+    private Boolean isDeleted;
 }

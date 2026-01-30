@@ -99,6 +99,26 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @Transactional
+    public CategoryResponseDTO restoreCategory(String id) {
+        CategoryEntity category = categoryRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(CATEGORY_LABEL, "categoryId", id));
+        
+        if (Boolean.FALSE.equals(category.getIsDeleted())) {
+            return toResponse(category);
+        }
+
+        category.setIsDeleted(false);
+        int updated = categoryRepository.softRestoreById(id);
+        if (updated == 0) {
+            category.setIsDeleted(false);
+            categoryRepository.save(category);
+        }
+        
+        return toResponse(category);
+    }
+
+    @Override
     public PagedResponse<CategoryResponseDTO> getCategoriesPage(int page, int size, String search, Boolean isDeleted) {
         int safePage = Math.max(0, page);
         int safeSize = size <= 0 ? 10 : size;
@@ -124,6 +144,7 @@ public class CategoryServiceImpl implements CategoryService {
                 .categoryCode(entity.getCategoryCode())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
+                .isDeleted(entity.getIsDeleted())
                 .build();
     }
 

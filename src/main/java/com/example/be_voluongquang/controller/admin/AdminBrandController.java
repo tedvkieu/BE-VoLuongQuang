@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -63,10 +64,17 @@ public class AdminBrandController {
         return ResponseEntity.ok(brandService.updateBrand(id, request));
     }
 
+
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteBrand(@PathVariable String id) {
         brandService.deleteBrand(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping(path = "/{id}/restore")
+    public ResponseEntity<BrandResponseDTO> restoreBrand(@PathVariable String id) {
+        return ResponseEntity.ok(brandService.restoreBrand(id));
     }
 
     @GetMapping("/simple")

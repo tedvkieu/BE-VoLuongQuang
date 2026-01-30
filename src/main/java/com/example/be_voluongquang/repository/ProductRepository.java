@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -105,6 +106,20 @@ public interface ProductRepository extends JpaRepository<ProductEntity, String>,
      */
     @Query("SELECT p FROM product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.productGroup WHERE p.productId = :productId")
     Optional<ProductEntity> findProductWithDetails(@Param("productId") String productId);
+
+    @Query(value = "SELECT * FROM product WHERE product_id = :productId", nativeQuery = true)
+    Optional<ProductEntity> findByIdIncludingDeleted(@Param("productId") String productId);
+
+    @Query(value = "SELECT COUNT(1) > 0 FROM product WHERE product_id = :productId", nativeQuery = true)
+    boolean existsAnyById(@Param("productId") String productId);
+
+    @Modifying
+    @Query(value = "UPDATE product SET is_deleted = true WHERE product_id = :productId", nativeQuery = true)
+    int softDeleteById(@Param("productId") String productId);
+
+    @Modifying
+    @Query(value = "UPDATE product SET is_deleted = false WHERE product_id = :productId", nativeQuery = true)
+    int softRestoreById(@Param("productId") String productId);
     
     /**
      * Tìm tất cả product với brand và category details
@@ -171,6 +186,7 @@ public interface ProductRepository extends JpaRepository<ProductEntity, String>,
      */
     @Query("SELECT p FROM product p " +
             "WHERE p.discountPercent > :minDiscount " +
+            "AND p.isDeleted = false " +
             "AND ( :searchTerm IS NULL " +
             "       OR LOWER(p.productId) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
             "       OR LOWER(p.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
@@ -230,4 +246,9 @@ public interface ProductRepository extends JpaRepository<ProductEntity, String>,
     // Existing methods
     List<ProductEntity> findAllByIsFeatured(boolean isFeatured);
     List<ProductEntity> findTop4ByOrderByDiscountPercentDesc();
+
+    List<ProductEntity> findByIsDeletedFalse();
+    List<ProductEntity> findAllByIsFeaturedAndIsDeletedFalse(boolean isFeatured);
+    List<ProductEntity> findTop4ByIsDeletedFalseOrderByDiscountPercentDesc();
+    Page<ProductEntity> findByDiscountPercentGreaterThanAndIsDeletedFalse(Integer discountPercent, Pageable pageable);
 }

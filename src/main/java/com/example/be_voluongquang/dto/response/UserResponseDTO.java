@@ -17,4 +17,5 @@ public class UserResponseDTO {
     private String address;
     private String role;
     private String createdAt;
+    private Boolean isDeleted;
 }

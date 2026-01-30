@@ -37,6 +37,7 @@ public class ProductMapper extends BaseMapper<ProductEntity, ProductResponseDTO>
                 .brandId(entity.getBrand() != null ? entity.getBrand().getBrandId() : null)
                 .categoryId(entity.getCategory() != null ? entity.getCategory().getCategoryId() : null)
                 .productGroupId(entity.getProductGroup() != null ? entity.getProductGroup().getGroupId() : null)
+                .isDeleted(entity.getIsDeleted())
                 .build();
     }
 

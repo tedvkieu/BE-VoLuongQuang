@@ -56,4 +56,7 @@ public interface ProductService {
     ProductResponseDTO deleteAProduct(String id);
 
     public void deleteMultipleProducts(List<String> ids);
+
+    // Restore method
+    ProductResponseDTO restoreProduct(String id);
 }

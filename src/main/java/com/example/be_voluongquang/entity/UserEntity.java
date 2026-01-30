@@ -6,7 +6,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToOne;
-import org.hibernate.annotations.Where;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,7 +13,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity(name = "users")
-@Where(clause = "is_deleted = false")
 @Getter
 @Setter
 @Builder

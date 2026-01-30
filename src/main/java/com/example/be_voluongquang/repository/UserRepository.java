@@ -21,6 +21,10 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
      * Tìm user theo email (case insensitive)
      */
     Optional<UserEntity> findByEmailIgnoreCase(String email);
+
+    Optional<UserEntity> findByEmailIgnoreCaseAndIsDeletedFalse(String email);
+
+    boolean existsByEmailIgnoreCaseAndIsDeletedFalse(String email);
     
     /**
      * Kiểm tra email đã tồn tại chưa
@@ -63,6 +67,12 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
      */
     @Query("SELECT u FROM users u WHERE u.email LIKE %:searchTerm% OR u.fullName LIKE %:searchTerm%")
     List<UserEntity> findByEmailOrFullNameContaining(@Param("searchTerm") String searchTerm);
+
+    @Query("SELECT u FROM users u WHERE (u.email LIKE %:searchTerm% OR u.fullName LIKE %:searchTerm%) AND u.isDeleted = :isDeleted")
+    List<UserEntity> findByEmailOrFullNameContainingAndIsDeleted(@Param("searchTerm") String searchTerm,
+            @Param("isDeleted") Boolean isDeleted);
+
+    List<UserEntity> findByIsDeleted(Boolean isDeleted);
     
     /**
      * Đếm số lượng user theo role

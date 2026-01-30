@@ -17,4 +17,5 @@ public class ProductSearchRequest {
     private Integer minDiscount;
     private Boolean isActive;
     private Boolean isFeatured;
+    private Boolean isDeleted;
 }

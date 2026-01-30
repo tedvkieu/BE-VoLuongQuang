@@ -33,8 +33,9 @@ public class UserController {
     @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     public List<UserResponseDTO> getUsers(
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) String role) {
-        return userService.getUsers(search, role);
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) Boolean isDeleted) {
+        return userService.getUsers(search, role, isDeleted);
     }
 
     @GetMapping("/{id}")
@@ -75,6 +76,12 @@ public class UserController {
     public ResponseEntity<Void> deleteUser(@PathVariable String id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/restore")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+    public ResponseEntity<UserResponseDTO> restoreUser(@PathVariable String id) {
+        return ResponseEntity.ok(userService.restoreUser(id));
     }
 
 }

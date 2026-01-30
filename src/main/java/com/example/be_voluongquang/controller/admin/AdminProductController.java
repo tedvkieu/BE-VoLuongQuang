@@ -61,7 +61,8 @@ public class AdminProductController {
             @RequestParam(name = "categoryIds", required = false) List<String> categoryIds,
             @RequestParam(name = "category_id", required = false) List<String> categoryIdsSnake,
             @RequestParam(name = "productGroupIds", required = false) List<String> productGroupIds,
-            @RequestParam(name = "product_group_id", required = false) List<String> productGroupIdsSnake) {
+            @RequestParam(name = "product_group_id", required = false) List<String> productGroupIdsSnake,
+            @RequestParam(name = "isDeleted", required = false) Boolean isDeleted) {
 
         ProductSearchRequest request = new ProductSearchRequest();
         request.setPage(page);
@@ -70,6 +71,7 @@ public class AdminProductController {
         request.setBrandIds(firstNonEmpty(brandIds, brandIdsSnake));
         request.setCategoryIds(firstNonEmpty(categoryIds, categoryIdsSnake));
         request.setProductGroupIds(firstNonEmpty(productGroupIds, productGroupIdsSnake));
+        request.setIsDeleted(isDeleted);
 
         return ResponseEntity.ok(productService.searchProducts(request));
 
@@ -182,6 +184,12 @@ public class AdminProductController {
             @RequestBody DiscountUpdateRequest request) {
         ProductResponseDTO updated = productService.updateDiscount(id, request.discountPercent());
         return ResponseEntity.ok(updated);
+    }
+    
+    @PatchMapping(path = "/{id}/restore")
+    public ResponseEntity<ProductResponseDTO> restoreProduct(@PathVariable String id) {
+        ProductResponseDTO restored = productService.restoreProduct(id);
+        return ResponseEntity.ok(restored);
     }
 
     @DeleteMapping("/{id}")

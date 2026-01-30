@@ -13,12 +13,14 @@ public interface UserService {
 
     public UserResponseDTO createAUser(UserRequestDTO user);
 
-    public java.util.List<UserResponseDTO> getUsers(String search, String role);
+    public java.util.List<UserResponseDTO> getUsers(String search, String role, Boolean isDeleted);
 
     public UserResponseDTO updateUser(String id, UserRequestDTO user);
 
     public UserResponseDTO updateUserRole(String id, UserRoleUpdateRequest request);
 
     public void deleteUser(String id);
+
+    public UserResponseDTO restoreUser(String id);
 
 }

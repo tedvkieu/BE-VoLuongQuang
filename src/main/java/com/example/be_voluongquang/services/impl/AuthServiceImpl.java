@@ -35,7 +35,7 @@ public class AuthServiceImpl implements AuthService {
         String rawEmail = request.getEmail() == null ? "" : request.getEmail().trim();
         String rawPassword = request.getPassword() == null ? "" : request.getPassword();
 
-        UserEntity user = userRepository.findByEmailIgnoreCase(rawEmail)
+        UserEntity user = userRepository.findByEmailIgnoreCaseAndIsDeletedFalse(rawEmail)
                 .orElseThrow(() -> new InvalidCredentialsException("Email không tồn tại trong hệ thống"));
 
         if (!passwordEncoder.matches(rawPassword, user.getPassword())) {

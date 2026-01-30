@@ -92,39 +92,40 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public List<ProductResponseDTO> getAllProduct() {
-        return productMapper.toDtoList(productRepository.findAll());
+        return productMapper.toDtoList(productRepository.findByIsDeletedFalse());
     }
 
     @Override
     public ProductResponseDTO getProductById(String id) {
         ProductEntity product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", id));
+        if (Boolean.TRUE.equals(product.getIsDeleted())) {
+            throw new ResourceNotFoundException("Product", "productId", id);
+        }
         return productMapper.toDTO(product);
     }
 
     @Override
     public List<ProductResponseDTO> getFeaturedProducts() {
-        return productMapper.toDtoList(productRepository.findAllByIsFeatured(true));
+        return productMapper.toDtoList(productRepository.findAllByIsFeaturedAndIsDeletedFalse(true));
     }
 
     @Override
     public List<ProductResponseDTO> getAllProductsDiscount() {
-        return productMapper.toDtoList(productRepository.findTop4ByOrderByDiscountPercentDesc());
+        return productMapper.toDtoList(productRepository.findTop4ByIsDeletedFalseOrderByDiscountPercentDesc());
     }
 
     @Override
     public Page<ProductResponseDTO> getProductsPaged(int page, int size, String search) {
         int safePage = Math.max(0, page);
         int safeSize = size <= 0 ? 15 : size;
-        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "updatedAt"));
 
-        Page<com.example.be_voluongquang.entity.ProductEntity> entityPage;
-        if (search != null && !search.trim().isEmpty()) {
-            String term = search.trim();
-            entityPage = productRepository.findByNameOrDescriptionContaining(term, pageable);
-        } else {
-            entityPage = productRepository.findAll(pageable);
-        }
+        ProductSearchRequest request = new ProductSearchRequest();
+        request.setSearch(search);
+        request.setIsDeleted(false);
+        Specification<ProductEntity> specification = buildProductSpecification(request);
+        Page<ProductEntity> entityPage = productRepository.findAll(specification, pageable);
 
         return entityPage.map(productMapper::toDTO);
     }
@@ -141,7 +142,7 @@ public class ProductServiceImpl implements ProductService {
         if (processedSearch != null) {
             entityPage = productRepository.searchDiscountedProducts(0, processedSearch, pageable);
         } else {
-            entityPage = productRepository.findByDiscountPercentGreaterThan(0, pageable);
+            entityPage = productRepository.findByDiscountPercentGreaterThanAndIsDeletedFalse(0, pageable);
         }
 
         return entityPage.map(productMapper::toDTO);
@@ -151,7 +152,7 @@ public class ProductServiceImpl implements ProductService {
     public Page<ProductResponseDTO> searchProducts(ProductSearchRequest request) {
         int safePage = request.getPage() != null ? Math.max(0, request.getPage()) : 0;
         int safeSize = (request.getSize() != null && request.getSize() > 0) ? request.getSize() : 15;
-        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "updatedAt"));
 
         Specification<ProductEntity> specification = buildProductSpecification(request);
         Page<ProductEntity> entityPage = productRepository.findAll(specification, pageable);
@@ -162,10 +163,13 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public byte[] exportProducts(ProductSearchRequest request) {
         ProductSearchRequest safeRequest = (request != null) ? request : new ProductSearchRequest();
+        if (safeRequest.getIsDeleted() == null) {
+            safeRequest.setIsDeleted(false);
+        }
         int safePage = safeRequest.getPage() != null ? Math.max(0, safeRequest.getPage()) : 0;
         int safeSize = (safeRequest.getSize() != null && safeRequest.getSize() > 0) ? safeRequest.getSize() : 15;
         Specification<ProductEntity> specification = buildProductSpecification(safeRequest);
-        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "updatedAt"));
         List<ProductEntity> products = productRepository.findAll(specification, pageable).getContent();
 
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -229,6 +233,9 @@ public class ProductServiceImpl implements ProductService {
     private Specification<ProductEntity> buildProductSpecification(ProductSearchRequest request) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
+            Boolean deletedFilter =
+                    request != null && request.getIsDeleted() != null ? request.getIsDeleted() : Boolean.FALSE;
+            predicates.add(cb.equal(root.get("isDeleted"), deletedFilter));
 
             if (StringUtils.hasText(request.getSearch())) {
                 String term = "%" + request.getSearch().trim().toLowerCase() + "%";
@@ -337,6 +344,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         ProductEntity product = ProductMapper.toEntity(dto, brand, category, productGroup, imageUrl);
+        product.setIsDeleted(false);
         ProductEntity savedProduct = productRepository.save(product);
         syncFileArchivals(savedProduct, imageUrl);
 
@@ -457,6 +465,7 @@ public class ProductServiceImpl implements ProductService {
         ProductEntity updatedProduct = ProductMapper.toEntity(dto, brand, category, productGroup, finalImageUrl);
         updatedProduct.setProductId(id); // Đảm bảo giữ nguyên ID
         updatedProduct.setCreatedAt(existingProduct.getCreatedAt()); // Giữ nguyên thời gian tạo
+        updatedProduct.setIsDeleted(existingProduct.getIsDeleted()); // Giữ nguyên trạng thái xoá
         if (updatedProduct.getUrlShopee() == null) {
             updatedProduct.setUrlShopee(existingProduct.getUrlShopee());
         }
@@ -603,14 +612,41 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponseDTO deleteAProduct(String id) {
-        // Kiểm tra product có tồn tại không trước khi xóa
-        ProductEntity existingProduct = productRepository.findById(id)
+        ProductEntity existingProduct = productRepository.findByIdIncludingDeleted(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", id));
 
-        existingProduct.setIsDeleted(true);
-        ProductEntity saved = productRepository.save(existingProduct);
+        if (Boolean.TRUE.equals(existingProduct.getIsDeleted())) {
+            return productMapper.toDTO(existingProduct);
+        }
 
-        return productMapper.toDTO(saved);
+        int updated = productRepository.softDeleteById(id);
+        if (updated == 0 && !productRepository.existsAnyById(id)) {
+            throw new ResourceNotFoundException("Product", "productId", id);
+        }
+
+        existingProduct.setIsDeleted(true);
+        return productMapper.toDTO(existingProduct);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponseDTO restoreProduct(String id) {
+        ProductEntity existingProduct = productRepository.findByIdIncludingDeleted(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", id));
+
+        if (Boolean.FALSE.equals(existingProduct.getIsDeleted())) {
+            return productMapper.toDTO(existingProduct);
+        }
+
+        existingProduct.setIsDeleted(false);
+        int updated = productRepository.softRestoreById(id);
+        if (updated == 0) {
+            // Fallback if native query fails for some reason, though entity save should handle it
+            existingProduct.setIsDeleted(false);
+            productRepository.save(existingProduct);
+        }
+        
+        return productMapper.toDTO(existingProduct);
     }
 
     @Override

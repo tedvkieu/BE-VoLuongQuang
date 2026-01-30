@@ -97,6 +97,26 @@ public class BrandServiceImpl implements BrandService {
     }
 
     @Override
+    @Transactional
+    public BrandResponseDTO restoreBrand(String id) {
+        BrandEntity brand = brandRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(BRAND_LABEL, "brandId", id));
+        
+        if (Boolean.FALSE.equals(brand.getIsDeleted())) {
+            return toResponse(brand);
+        }
+
+        brand.setIsDeleted(false);
+        int updated = brandRepository.softRestoreById(id);
+        if (updated == 0) {
+            brand.setIsDeleted(false);
+            brandRepository.save(brand);
+        }
+        
+        return toResponse(brand);
+    }
+
+    @Override
     public PagedResponse<BrandResponseDTO> getBrandsPage(int page, int size, String search, Boolean isDeleted) {
         int safePage = Math.max(0, page);
         int safeSize = size <= 0 ? 10 : size;
@@ -120,7 +140,9 @@ public class BrandServiceImpl implements BrandService {
                 .brandId(entity.getBrandId())
                 .brandName(entity.getBrandName())
                 .createdAt(entity.getCreatedAt())
+                .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
+                .isDeleted(entity.getIsDeleted())
                 .build();
     }
 

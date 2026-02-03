@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -41,6 +42,10 @@ public class UserEntity extends BaseEntity {
 
     @Column(name = "role")
     private String role;
+
+    @OneToOne
+    @JoinColumn(name = "avatar_id")
+    private FileArchivalEntity avatar;
     
     @OneToOne(mappedBy = "user")
     private CartEntity cart;

@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import org.hibernate.annotations.Where;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,4 +34,7 @@ public class FileArchivalEntity extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "product_id")
     private ProductEntity product;
+
+    @OneToOne(mappedBy = "avatar")
+    private UserEntity user;
 }

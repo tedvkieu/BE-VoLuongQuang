@@ -12,4 +12,5 @@
 	<include file="006-category-code-seed.xml" relativeToChangelogFile="true" />
 	<include file="007-add-baseentity-fields.xml" relativeToChangelogFile="true" />
 	<include file="008-add-user-avatar.xml" relativeToChangelogFile="true" />
+	<include file="009-add-banner.xml" relativeToChangelogFile="true" />
 </databaseChangeLog>

@@ -8,16 +8,23 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.be_voluongquang.dto.request.UserRequestDTO;
+import com.example.be_voluongquang.dto.request.UserProfileUpdateRequest;
 import com.example.be_voluongquang.dto.request.UserRoleUpdateRequest;
+import com.example.be_voluongquang.dto.response.UserProfileDTO;
 import com.example.be_voluongquang.dto.response.UserResponseDTO;
+import com.example.be_voluongquang.entity.FileArchivalEntity;
 import com.example.be_voluongquang.entity.UserEntity;
+import com.example.be_voluongquang.exception.FileUploadException;
 import com.example.be_voluongquang.exception.ResourceNotFoundException;
 import com.example.be_voluongquang.exception.UserAlreadyExistsException;
 import com.example.be_voluongquang.mapper.UserMapper;
+import com.example.be_voluongquang.repository.FileArchivalRepository;
 import com.example.be_voluongquang.repository.UserRepository;
+import com.example.be_voluongquang.services.app.UploadImgImgService;
 import com.example.be_voluongquang.services.UserService;
 
 import jakarta.transaction.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -30,6 +37,12 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private FileArchivalRepository fileArchivalRepository;
+
+    @Autowired
+    private UploadImgImgService uploadImgImgService;
 
     private static final Set<String> ALLOWED_CREATE_ROLES = Set.of("CUSTOMER", "STAFF");
     private static final Set<String> ALLOWED_UPDATE_ROLES = Set.of("ADMIN", "CUSTOMER", "STAFF");
@@ -174,5 +187,91 @@ public class UserServiceImpl implements UserService {
 
         target.setIsDeleted(false);
         return userMapper.toDto(userRepository.save(target));
+    }
+
+    @Override
+    public UserProfileDTO getUserProfile(String userId) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "userId", userId));
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
+            throw new ResourceNotFoundException("User", "userId", userId);
+        }
+        return toProfileDto(user);
+    }
+
+    @Override
+    @Transactional
+    public UserProfileDTO updateProfile(String userId, UserProfileUpdateRequest request) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "userId", userId));
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
+            throw new ResourceNotFoundException("User", "userId", userId);
+        }
+
+        if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
+            String email = request.getEmail().trim();
+            if (!email.equalsIgnoreCase(user.getEmail()) && userRepository.existsByEmailIgnoreCase(email)) {
+                throw new UserAlreadyExistsException(email);
+            }
+            user.setEmail(email);
+        }
+
+        if (request.getFullName() != null) {
+            user.setFullName(request.getFullName());
+        }
+
+        if (request.getPhone() != null) {
+            user.setPhone(request.getPhone());
+        }
+
+        if (request.getAddress() != null) {
+            user.setAddress(request.getAddress());
+        }
+
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+
+        UserEntity saved = userRepository.save(user);
+        return toProfileDto(saved);
+    }
+
+    @Override
+    @Transactional
+    public UserProfileDTO updateAvatar(String userId, MultipartFile avatar) {
+        if (avatar == null || avatar.isEmpty()) {
+            throw new FileUploadException("Avatar file is required");
+        }
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "userId", userId));
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
+            throw new ResourceNotFoundException("User", "userId", userId);
+        }
+
+        String avatarUrl = uploadImgImgService.handleSaveUploadFile(avatar, "images/avatar");
+        FileArchivalEntity file = FileArchivalEntity.builder()
+                .fileId(java.util.UUID.randomUUID().toString())
+                .fileUrl(avatarUrl)
+                .storageProvider("R2")
+                .build();
+        FileArchivalEntity savedFile = fileArchivalRepository.save(file);
+
+        user.setAvatar(savedFile);
+        UserEntity saved = userRepository.save(user);
+        return toProfileDto(saved);
+    }
+
+    private UserProfileDTO toProfileDto(UserEntity user) {
+        FileArchivalEntity avatar = user.getAvatar();
+        return UserProfileDTO.builder()
+                .userId(user.getUserId())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .address(user.getAddress())
+                .role(user.getRole())
+                .avatarId(avatar != null ? avatar.getFileId() : null)
+                .avatarUrl(avatar != null ? avatar.getFileUrl() : null)
+                .build();
     }
 }

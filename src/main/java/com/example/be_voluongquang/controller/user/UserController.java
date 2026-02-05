@@ -8,8 +8,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.example.be_voluongquang.dto.request.UserProfileUpdateRequest;
 import com.example.be_voluongquang.dto.request.UserRequestDTO;
 import com.example.be_voluongquang.dto.request.UserRoleUpdateRequest;
+import com.example.be_voluongquang.dto.response.UserProfileDTO;
 import com.example.be_voluongquang.dto.response.UserResponseDTO;
 import com.example.be_voluongquang.services.UserService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,6 +23,10 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
+import com.example.be_voluongquang.security.JwtAuthenticationFilter;
 
 @RestController
 @RequestMapping(path = "/api/user", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -82,6 +88,48 @@ public class UserController {
     @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     public ResponseEntity<UserResponseDTO> restoreUser(@PathVariable String id) {
         return ResponseEntity.ok(userService.restoreUser(id));
+    }
+
+    @GetMapping("/profile")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF','CUSTOMER')")
+    public ResponseEntity<UserProfileDTO> getProfile(HttpServletRequest request) {
+        String userId = resolveAuthenticatedUserId(request);
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(userService.getUserProfile(userId));
+    }
+
+    @PutMapping("/profile")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF','CUSTOMER')")
+    public ResponseEntity<UserProfileDTO> updateProfile(
+            HttpServletRequest request,
+            @RequestBody UserProfileUpdateRequest payload) {
+        String userId = resolveAuthenticatedUserId(request);
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(userService.updateProfile(userId, payload));
+    }
+
+    @PostMapping(path = "/profile/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF','CUSTOMER')")
+    public ResponseEntity<UserProfileDTO> updateAvatar(
+            HttpServletRequest request,
+            @RequestPart("avatar") MultipartFile avatar) {
+        String userId = resolveAuthenticatedUserId(request);
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(userService.updateAvatar(userId, avatar));
+    }
+
+    private String resolveAuthenticatedUserId(HttpServletRequest request) {
+        Object attr = request.getAttribute(JwtAuthenticationFilter.ATTR_AUTHENTICATED_USER_ID);
+        if (attr instanceof String attrValue && !attrValue.isBlank()) {
+            return attrValue;
+        }
+        return null;
     }
 
 }

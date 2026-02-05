@@ -37,4 +37,7 @@ public class FileArchivalEntity extends BaseEntity {
 
     @OneToOne(mappedBy = "avatar")
     private UserEntity user;
+
+    @OneToOne(mappedBy = "image")
+    private BannerEntity banner;
 }

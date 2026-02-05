@@ -4,7 +4,10 @@ import java.util.Optional;
 import org.springframework.stereotype.Component;
 import com.example.be_voluongquang.dto.request.UserRequestDTO;
 import com.example.be_voluongquang.dto.request.UserRoleUpdateRequest;
+import com.example.be_voluongquang.dto.request.UserProfileUpdateRequest;
+import com.example.be_voluongquang.dto.response.UserProfileDTO;
 import com.example.be_voluongquang.dto.response.UserResponseDTO;
+import org.springframework.web.multipart.MultipartFile;
 
 @Component
 public interface UserService {
@@ -22,5 +25,11 @@ public interface UserService {
     public void deleteUser(String id);
 
     public UserResponseDTO restoreUser(String id);
+
+    public UserProfileDTO getUserProfile(String userId);
+
+    public UserProfileDTO updateProfile(String userId, UserProfileUpdateRequest request);
+
+    public UserProfileDTO updateAvatar(String userId, MultipartFile avatar);
 
 }

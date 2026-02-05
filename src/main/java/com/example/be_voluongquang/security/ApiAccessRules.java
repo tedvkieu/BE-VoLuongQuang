@@ -13,6 +13,7 @@ public final class ApiAccessRules {
             "/api/contact/public",
             "/api/banner/public",
             "/api/category/public",
+            "/api/featured-image/public",
             "/api/brand/**",
             "/api/product-group/**",
             "/images/**"

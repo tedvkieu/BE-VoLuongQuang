@@ -15,4 +15,5 @@
 	<include file="009-add-banner.xml" relativeToChangelogFile="true" />
 	<include file="010-add-contact.xml" relativeToChangelogFile="true" />
 	<include file="011-add-contact-status.xml" relativeToChangelogFile="true" />
+	<include file="012-add-featured-image.xml" relativeToChangelogFile="true" />
 </databaseChangeLog>

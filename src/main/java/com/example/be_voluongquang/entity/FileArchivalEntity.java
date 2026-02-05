@@ -40,4 +40,7 @@ public class FileArchivalEntity extends BaseEntity {
 
     @OneToOne(mappedBy = "image")
     private BannerEntity banner;
+
+    @OneToOne(mappedBy = "image")
+    private FeaturedImageEntity featuredImage;
 }

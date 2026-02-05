@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+  <changeSet id="011-add-contact-status" author="codex">
+    <addColumn tableName="contact">
+      <column name="status" type="varchar(20)" defaultValue="NEW">
+        <constraints nullable="false"/>
+      </column>
+    </addColumn>
+
+    <createIndex indexName="idx_contact_status" tableName="contact">
+      <column name="status"/>
+    </createIndex>
+  </changeSet>
+
+</databaseChangeLog>
+

@@ -10,6 +10,8 @@ public final class ApiAccessRules {
             "/api/auth/**",
             "/api/product/**",
             "/api/product/search",
+            "/api/contact/public",
+            "/api/banner/public",
             "/api/category/public",
             "/api/brand/**",
             "/api/product-group/**",

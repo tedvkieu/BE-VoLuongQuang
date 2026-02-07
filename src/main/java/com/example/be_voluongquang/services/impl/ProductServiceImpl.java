@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Locale;
 import java.util.Set;
 
 import org.apache.poi.ss.usermodel.Row;
@@ -238,7 +239,8 @@ public class ProductServiceImpl implements ProductService {
             predicates.add(cb.equal(root.get("isDeleted"), deletedFilter));
 
             if (StringUtils.hasText(request.getSearch())) {
-                String term = "%" + request.getSearch().trim().toLowerCase() + "%";
+                String normalized = request.getSearch().trim().toLowerCase(Locale.ROOT);
+                String term = "%" + normalized + "%";
                 predicates.add(cb.or(
                         cb.like(cb.lower(root.get("name")), term),
                         cb.like(cb.lower(root.get("description")), term),

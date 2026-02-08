@@ -11,6 +11,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CartItemResponseDTO {
     private String productId;
+    private String productVariantId;
+    private String variantName;
     private String name;
     private String imageUrl;
     private Double price;

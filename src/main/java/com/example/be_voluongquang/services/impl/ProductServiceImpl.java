@@ -27,12 +27,14 @@ import lombok.extern.slf4j.Slf4j;
 import com.example.be_voluongquang.dto.request.product.ImportErrorDTO;
 import com.example.be_voluongquang.dto.request.product.ProductRequestDTO;
 import com.example.be_voluongquang.dto.request.product.ProductSearchRequest;
+import com.example.be_voluongquang.dto.request.product.ProductVariantRequestDTO;
 import com.example.be_voluongquang.dto.response.product.ProductResponseDTO;
 import com.example.be_voluongquang.entity.BrandEntity;
 import com.example.be_voluongquang.entity.CategoryEntity;
 import com.example.be_voluongquang.entity.ProductEntity;
 import com.example.be_voluongquang.entity.ProductGroupEntity;
 import com.example.be_voluongquang.entity.FileArchivalEntity;
+import com.example.be_voluongquang.entity.ProductVariantEntity;
 import com.example.be_voluongquang.exception.ProductAlreadyExistsException;
 import com.example.be_voluongquang.exception.ResourceNotFoundException;
 import com.example.be_voluongquang.mapper.ProductMapper;
@@ -41,6 +43,7 @@ import com.example.be_voluongquang.repository.CategoryRepository;
 import com.example.be_voluongquang.repository.FileArchivalRepository;
 import com.example.be_voluongquang.repository.ProductGroupRepository;
 import com.example.be_voluongquang.repository.ProductRepository;
+import com.example.be_voluongquang.repository.ProductVariantRepository;
 import com.example.be_voluongquang.services.ProductService;
 import com.example.be_voluongquang.services.app.UploadImgImgService;
 import com.example.be_voluongquang.utils.CsvParserUtils;
@@ -72,6 +75,7 @@ public class ProductServiceImpl implements ProductService {
     private final UploadImgImgService uploadImgImgService;
     private final FileArchivalRepository fileArchivalRepository;
     private final ImageNamingUtil imageNamingUtil;
+    private final ProductVariantRepository productVariantRepository;
 
     public ProductServiceImpl(ProductRepository productRepository,
             CategoryRepository categoryRepository,
@@ -79,7 +83,8 @@ public class ProductServiceImpl implements ProductService {
             ProductGroupRepository productGroupRepository,
             UploadImgImgService uploadImgImgService,
             FileArchivalRepository fileArchivalRepository,
-            ImageNamingUtil imageNamingUtil) {
+            ImageNamingUtil imageNamingUtil,
+            ProductVariantRepository productVariantRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.brandRepository = brandRepository;
@@ -87,6 +92,7 @@ public class ProductServiceImpl implements ProductService {
         this.uploadImgImgService = uploadImgImgService;
         this.fileArchivalRepository = fileArchivalRepository;
         this.imageNamingUtil = imageNamingUtil;
+        this.productVariantRepository = productVariantRepository;
     }
 
     // Service Impl for GET Method -----------------------------------------
@@ -98,8 +104,9 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public ProductResponseDTO getProductById(String id) {
-        ProductEntity product = productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", id));
+        ProductEntity product = productRepository.findProductWithDetailsAndProductVariants(id)
+                .orElseGet(() -> productRepository.findById(id)
+                        .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", id)));
         if (Boolean.TRUE.equals(product.getIsDeleted())) {
             throw new ResourceNotFoundException("Product", "productId", id);
         }
@@ -288,6 +295,7 @@ public class ProductServiceImpl implements ProductService {
     // Service Impl for POST Method -----------------------------------------
 
     @Override
+    @Transactional
     public ProductResponseDTO createAProduct(MultipartFile[] images, ProductRequestDTO dto) {
 
         if (dto.getProductId() != null && !dto.getProductId().trim().isEmpty()) {
@@ -349,8 +357,11 @@ public class ProductServiceImpl implements ProductService {
         product.setIsDeleted(false);
         ProductEntity savedProduct = productRepository.save(product);
         syncFileArchivals(savedProduct, imageUrl);
+        syncProductVariants(savedProduct, dto.getProductVariants());
 
-        return productMapper.toDTO(savedProduct);
+        ProductEntity reloaded = productRepository.findProductWithDetailsAndProductVariants(savedProduct.getProductId())
+                .orElse(savedProduct);
+        return productMapper.toDTO(reloaded);
     }
 
     @Override
@@ -480,8 +491,68 @@ public class ProductServiceImpl implements ProductService {
 
         ProductEntity savedProduct = productRepository.save(updatedProduct);
         syncFileArchivals(savedProduct, finalImageUrl);
+        syncProductVariants(savedProduct, dto.getProductVariants());
 
-        return productMapper.toDTO(savedProduct);
+        ProductEntity reloaded = productRepository.findProductWithDetailsAndProductVariants(savedProduct.getProductId())
+                .orElse(savedProduct);
+        return productMapper.toDTO(reloaded);
+    }
+
+    private void syncProductVariants(ProductEntity product, List<ProductVariantRequestDTO> payload) {
+        if (product == null || !StringUtils.hasText(product.getProductId())) {
+            return;
+        }
+
+        String productId = product.getProductId();
+        productVariantRepository.deleteByProductProductId(productId);
+
+        if (payload == null || payload.isEmpty()) {
+            return;
+        }
+
+        List<ProductVariantEntity> toInsert = new ArrayList<>();
+        int fallbackOrder = 0;
+        for (ProductVariantRequestDTO item : payload) {
+            if (item == null) continue;
+            String variantName = item.getVariantName() == null ? "" : item.getVariantName().trim();
+            if (!StringUtils.hasText(variantName)) continue;
+            Double variantPrice = item.getVariantPrice();
+            if (variantPrice == null || !Double.isFinite(variantPrice) || variantPrice < 0) {
+                continue;
+            }
+
+            Integer stockQuantity = item.getStockQuantity();
+            if (stockQuantity == null) {
+                stockQuantity = 0;
+            }
+            if (stockQuantity < 0) {
+                stockQuantity = 0;
+            }
+
+            int discountPercent = product.getDiscountPercent() == null ? 0 : product.getDiscountPercent();
+            if (discountPercent < 0) discountPercent = 0;
+            if (discountPercent > 100) discountPercent = 100;
+            double finalPrice = variantPrice * (1 - discountPercent / 100.0);
+
+            Integer sortOrder = item.getSortOrder();
+            if (sortOrder == null) {
+                sortOrder = fallbackOrder;
+            }
+            fallbackOrder++;
+
+            toInsert.add(ProductVariantEntity.builder()
+                    .product(product)
+                    .variantName(variantName)
+                    .variantPrice(variantPrice)
+                    .finalPrice(finalPrice)
+                    .stockQuantity(stockQuantity)
+                    .sortOrder(sortOrder)
+                    .build());
+        }
+
+        if (!toInsert.isEmpty()) {
+            productVariantRepository.saveAll(toInsert);
+        }
     }
 
     @Override
@@ -502,6 +573,7 @@ public class ProductServiceImpl implements ProductService {
         int sanitized = discountPercent == null ? 0 : Math.max(0, Math.min(discountPercent, 100));
         existingProduct.setDiscountPercent(sanitized);
         ProductEntity saved = productRepository.save(existingProduct);
+        productVariantRepository.recomputeFinalPriceForProduct(id, sanitized);
         return productMapper.toDTO(saved);
     }
 

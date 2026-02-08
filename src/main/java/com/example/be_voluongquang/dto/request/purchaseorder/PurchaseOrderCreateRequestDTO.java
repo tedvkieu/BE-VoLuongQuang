@@ -37,4 +37,3 @@ public class PurchaseOrderCreateRequestDTO {
     @NotEmpty(message = "Danh sách sản phẩm không được rỗng")
     private List<PurchaseOrderItemCreateRequestDTO> items;
 }
-

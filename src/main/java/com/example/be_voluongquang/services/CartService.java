@@ -12,7 +12,7 @@ public interface CartService {
 
     CartResponseDTO updateItemQuantity(String userId, CartItemUpdateRequestDTO request);
 
-    CartResponseDTO removeItemFromCart(String userId, String productId);
+    CartResponseDTO removeItemFromCart(String userId, String productId, String productVariantId);
 
     CartResponseDTO getCartByUserId(String userId);
 }

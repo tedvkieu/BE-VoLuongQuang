@@ -12,6 +12,8 @@ import lombok.NoArgsConstructor;
 public class PurchaseOrderItemResponseDTO {
     private String purchaseOrderItemId;
     private String productId;
+    private String productVariantId;
+    private String variantName;
     private String productName;
     private String productUnit;
     private String productImageUrl;

@@ -19,5 +19,7 @@ public class PurchaseOrderItemUpdateRequestDTO {
     @NotNull(message = "quantity is required")
     @Min(value = 1, message = "quantity must be >= 1")
     private Integer quantity;
-}
 
+    @Min(value = 0, message = "discountAmount must be >= 0")
+    private Double discountAmount;
+}

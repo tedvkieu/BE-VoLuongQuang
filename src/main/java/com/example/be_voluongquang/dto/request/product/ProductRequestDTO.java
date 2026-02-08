@@ -1,11 +1,13 @@
 package com.example.be_voluongquang.dto.request.product;
 
+import java.util.List;
 import lombok.Data;
 
 @Data
 public class ProductRequestDTO {
 
     private String productId;
+    private List<ProductVariantRequestDTO> productVariants;
     private String name;
     private Double price;
     private Double costPrice;

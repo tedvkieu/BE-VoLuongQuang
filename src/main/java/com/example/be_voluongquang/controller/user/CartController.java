@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PathVariable;
 
@@ -69,13 +70,14 @@ public class CartController {
     @DeleteMapping(path = "/items/{productId}")
     public ResponseEntity<CartResponseDTO> removeItemFromCart(
             @PathVariable("productId") String productId,
+            @RequestParam(name = "productVariantId", required = false) String productVariantId,
             HttpServletRequest request) {
         String userId = resolveUserId(request);
         if (userId == null || userId.isBlank()) {
             return ResponseEntity.status(401).build();
         }
 
-        CartResponseDTO cart = cartService.removeItemFromCart(userId, productId);
+        CartResponseDTO cart = cartService.removeItemFromCart(userId, productId, productVariantId);
         return ResponseEntity.ok(cart);
     }
 

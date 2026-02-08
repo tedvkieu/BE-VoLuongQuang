@@ -86,4 +86,8 @@ public class ProductEntity extends BaseEntity {
     @Builder.Default
     private List<FileArchivalEntity> files = new ArrayList<>();
 
+    @OneToMany(mappedBy = "product")
+    @Builder.Default
+    private List<ProductVariantEntity> productVariants = new ArrayList<>();
+
 }

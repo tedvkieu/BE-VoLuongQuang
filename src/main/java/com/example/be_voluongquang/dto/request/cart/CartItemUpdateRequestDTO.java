@@ -16,6 +16,8 @@ public class CartItemUpdateRequestDTO {
     @NotBlank(message = "Product ID is required")
     private String productId;
 
+    private String productVariantId;
+
     @NotNull(message = "Quantity is required")
     @Min(value = 0, message = "Số lượng phải lớn hơn hoặc bằng 0")
     private Integer quantity;

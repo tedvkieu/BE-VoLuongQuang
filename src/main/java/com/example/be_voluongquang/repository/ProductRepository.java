@@ -107,6 +107,14 @@ public interface ProductRepository extends JpaRepository<ProductEntity, String>,
     @Query("SELECT p FROM product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.productGroup WHERE p.productId = :productId")
     Optional<ProductEntity> findProductWithDetails(@Param("productId") String productId);
 
+    @Query("SELECT DISTINCT p FROM product p " +
+            "LEFT JOIN FETCH p.brand " +
+            "LEFT JOIN FETCH p.category " +
+            "LEFT JOIN FETCH p.productGroup " +
+            "LEFT JOIN FETCH p.productVariants pv " +
+            "WHERE p.productId = :productId")
+    Optional<ProductEntity> findProductWithDetailsAndProductVariants(@Param("productId") String productId);
+
     @Query(value = "SELECT * FROM product WHERE product_id = :productId", nativeQuery = true)
     Optional<ProductEntity> findByIdIncludingDeleted(@Param("productId") String productId);
 

@@ -13,11 +13,13 @@ import com.example.be_voluongquang.dto.response.cart.CartResponseDTO;
 import com.example.be_voluongquang.entity.CartEntity;
 import com.example.be_voluongquang.entity.CartItemEntity;
 import com.example.be_voluongquang.entity.ProductEntity;
+import com.example.be_voluongquang.entity.ProductVariantEntity;
 import com.example.be_voluongquang.entity.UserEntity;
 import com.example.be_voluongquang.exception.ResourceNotFoundException;
 import com.example.be_voluongquang.repository.CartItemRepository;
 import com.example.be_voluongquang.repository.CartRepository;
 import com.example.be_voluongquang.repository.ProductRepository;
+import com.example.be_voluongquang.repository.ProductVariantRepository;
 import com.example.be_voluongquang.repository.UserRepository;
 import com.example.be_voluongquang.services.CartService;
 import com.example.be_voluongquang.dto.request.cart.CartItemUpdateRequestDTO;
@@ -31,7 +33,14 @@ public class CartServiceImpl implements CartService {
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
+    private final ProductVariantRepository productVariantRepository;
     private final UserRepository userRepository;
+
+    private String normalizeVariantId(String raw) {
+        if (raw == null) return null;
+        String value = raw.trim();
+        return value.isEmpty() ? null : value;
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -54,13 +63,41 @@ public class CartServiceImpl implements CartService {
         if (request == null) {
             throw new IllegalArgumentException("Yêu cầu không hợp lệ");
         }
+        String productVariantId = normalizeVariantId(request.getProductVariantId());
         int quantity = request.getQuantity() == null ? 1 : request.getQuantity();
         if (quantity <= 0) {
             throw new IllegalArgumentException("Số lượng phải lớn hơn hoặc bằng 1");
         }
 
-        ProductEntity product = productRepository.findById(request.getProductId())
+        String productId = request.getProductId() == null ? null : request.getProductId().trim();
+        if (productId == null || productId.isBlank()) {
+            throw new IllegalArgumentException("productId không hợp lệ");
+        }
+
+        ProductEntity product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", request.getProductId()));
+
+        ProductVariantEntity variant = null;
+        if (productVariantId != null) {
+            final String requestedVariantId = productVariantId;
+            variant = productVariantRepository.findById(requestedVariantId)
+                    .orElseThrow(() -> new ResourceNotFoundException("ProductVariant", "productVariantId", requestedVariantId));
+            if (Boolean.TRUE.equals(variant.getIsDeleted())) {
+                throw new IllegalStateException("Phân loại sản phẩm đã bị tắt");
+            }
+            String variantProductId =
+                    variant.getProduct() != null ? variant.getProduct().getProductId() : null;
+            if (variantProductId == null || !variantProductId.equals(productId)) {
+                throw new IllegalArgumentException("Phân loại sản phẩm không thuộc sản phẩm đã chọn");
+            }
+        } else {
+            List<ProductVariantEntity> variants =
+                    productVariantRepository.findByProductProductIdAndIsDeletedFalseOrderBySortOrderAsc(productId);
+            if (variants != null && !variants.isEmpty()) {
+                variant = variants.get(0);
+                productVariantId = variant.getProductVariantId();
+            }
+        }
 
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "userId", userId));
@@ -76,7 +113,7 @@ public class CartServiceImpl implements CartService {
         }
 
         CartItemEntity cartItem = cartItemRepository
-                .findByCartIdAndProductId(cart.getCartId(), product.getProductId())
+                .findByCartIdAndProductIdAndVariantId(cart.getCartId(), product.getProductId(), productVariantId)
                 .orElse(null);
 
         // int availableStock = product.getStockQuantity() == null ? Integer.MAX_VALUE :
@@ -89,8 +126,10 @@ public class CartServiceImpl implements CartService {
             cartItem = CartItemEntity.builder()
                     .cartId(cart.getCartId())
                     .productId(product.getProductId())
+                    .productVariantId(productVariantId)
                     .cart(cart)
                     .product(product)
+                    .productVariant(variant)
                     .quantity(quantity)
                     .build();
         } else {
@@ -116,27 +155,36 @@ public class CartServiceImpl implements CartService {
         if (request == null) {
             throw new IllegalArgumentException("Yêu cầu không hợp lệ");
         }
+        String productVariantId = normalizeVariantId(request.getProductVariantId());
         int targetQuantity = request.getQuantity() == null ? 0 : request.getQuantity();
         if (targetQuantity < 0) {
             throw new IllegalArgumentException("Số lượng không hợp lệ");
         }
 
         if (targetQuantity == 0) {
-            return removeItemFromCart(userId, request.getProductId());
+            return removeItemFromCart(userId, request.getProductId(), productVariantId);
         }
 
         CartEntity cart = cartRepository.findCartWithItemsByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cart", "userId", userId));
 
+        String productId = request.getProductId() == null ? null : request.getProductId().trim();
+        if (productId == null || productId.isBlank()) {
+            throw new IllegalArgumentException("productId không hợp lệ");
+        }
+
         CartItemEntity cartItem = cart.getCartItems().stream()
-                .filter(item -> item != null && request.getProductId().equals(item.getProductId()))
+                .filter(item -> item != null
+                        && productId.equals(item.getProductId())
+                        && ((productVariantId == null && item.getProductVariantId() == null)
+                        || (productVariantId != null && productVariantId.equals(item.getProductVariantId()))))
                 .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("CartItem", "productId", request.getProductId()));
+                .orElseThrow(() -> new ResourceNotFoundException("CartItem", "productId", productId));
 
         ProductEntity product = cartItem.getProduct();
         if (product == null) {
-            product = productRepository.findById(request.getProductId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", request.getProductId()));
+            product = productRepository.findById(productId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
             cartItem.setProduct(product);
         }
 
@@ -156,13 +204,15 @@ public class CartServiceImpl implements CartService {
 
     @Override
     @Transactional
-    public CartResponseDTO removeItemFromCart(String userId, String productId) {
+    public CartResponseDTO removeItemFromCart(String userId, String productId, String productVariantId) {
         if (userId == null || userId.isBlank()) {
             throw new IllegalArgumentException("Không xác định được người dùng");
         }
         if (productId == null || productId.isBlank()) {
             throw new IllegalArgumentException("Sản phẩm không hợp lệ");
         }
+        String normalizedProductId = productId.trim();
+        String normalizedVariantId = normalizeVariantId(productVariantId);
 
         CartEntity cart = cartRepository.findCartWithItemsAndProductDetailsByUserId(userId)
                 .orElse(null);
@@ -172,13 +222,19 @@ public class CartServiceImpl implements CartService {
         }
 
         boolean existsInCart = cart.getCartItems().stream()
-                .anyMatch(item -> item != null && productId.equals(item.getProductId()));
+                .anyMatch(item -> item != null
+                        && normalizedProductId.equals(item.getProductId())
+                        && ((normalizedVariantId == null && item.getProductVariantId() == null)
+                        || (normalizedVariantId != null && normalizedVariantId.equals(item.getProductVariantId()))));
 
         if (!existsInCart) {
             return mapToCartResponse(cart);
         }
 
-        cartItemRepository.deleteByCartIdAndProductId(cart.getCartId(), productId);
+        cartItemRepository.deleteByCartIdAndProductIdAndVariantId(
+                cart.getCartId(),
+                normalizedProductId,
+                normalizedVariantId);
         cartRepository.flush();
 
         return cartRepository.findCartWithItemsByUserId(userId)
@@ -222,9 +278,16 @@ public class CartServiceImpl implements CartService {
             }
 
             int quantity = cartItem.getQuantity() == null ? 0 : cartItem.getQuantity();
-            double price = product.getPrice() == null ? 0.0 : product.getPrice();
+            ProductVariantEntity variant = cartItem.getProductVariant();
+            double price =
+                    variant != null
+                            ? (variant.getVariantPrice() == null ? 0.0 : variant.getVariantPrice())
+                            : (product.getPrice() == null ? 0.0 : product.getPrice());
             int discountPercent = product.getDiscountPercent() == null ? 0 : product.getDiscountPercent();
-            double discountedPrice = price * (1 - discountPercent / 100.0);
+            double discountedPrice =
+                    variant != null && variant.getFinalPrice() != null && variant.getFinalPrice() >= 0
+                            ? variant.getFinalPrice()
+                            : price * (1 - discountPercent / 100.0);
 
             double subtotalOriginal = price * quantity;
             double subtotalDiscounted = discountedPrice * quantity;
@@ -235,6 +298,8 @@ public class CartServiceImpl implements CartService {
 
             items.add(CartItemResponseDTO.builder()
                     .productId(product.getProductId())
+                    .productVariantId(cartItem.getProductVariantId())
+                    .variantName(variant != null ? variant.getVariantName() : null)
                     .name(product.getName())
                     .imageUrl(product.getImageUrl())
                     .price(price)

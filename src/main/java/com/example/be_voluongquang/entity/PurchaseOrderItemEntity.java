@@ -48,6 +48,20 @@ public class PurchaseOrderItemEntity extends BaseEntity {
             updatable = false)
     private ProductEntity product;
 
+    @Column(name = "product_variant_id")
+    private String productVariantId;
+
+    @ManyToOne
+    @JoinColumn(
+            name = "product_variant_id",
+            referencedColumnName = "product_variant_id",
+            insertable = false,
+            updatable = false)
+    private ProductVariantEntity productVariant;
+
+    @Column(name = "variant_name", length = 100)
+    private String variantName;
+
     @Column(name = "product_name", nullable = false)
     private String productName;
 
@@ -75,4 +89,3 @@ public class PurchaseOrderItemEntity extends BaseEntity {
     @Column(name = "final_line_total")
     private Double finalLineTotal;
 }
-

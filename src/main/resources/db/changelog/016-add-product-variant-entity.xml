@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+  <changeSet id="016-add-product-variant-entity" author="codex">
+    <createTable tableName="product_variant">
+      <column name="product_variant_id" type="varchar(255)">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+
+      <column name="product_id" type="varchar(50)">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="variant_name" type="varchar(100)">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="variant_price" type="numeric(12,2)">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="sort_order" type="int"/>
+
+      <column name="uuid" type="varchar(36)"/>
+      <column name="created_at" type="timestamp"/>
+      <column name="updated_at" type="timestamp"/>
+      <column name="is_deleted" type="boolean" defaultValueBoolean="false"/>
+    </createTable>
+
+    <addForeignKeyConstraint
+      baseTableName="product_variant"
+      baseColumnNames="product_id"
+      referencedTableName="product"
+      referencedColumnNames="product_id"
+      constraintName="fk_product_variant_product"
+      onDelete="CASCADE"/>
+
+    <createIndex indexName="idx_product_variant_product_id" tableName="product_variant">
+      <column name="product_id"/>
+    </createIndex>
+
+    <createIndex indexName="idx_product_variant_sort_order" tableName="product_variant">
+      <column name="product_id"/>
+      <column name="sort_order"/>
+    </createIndex>
+  </changeSet>
+
+</databaseChangeLog>
+

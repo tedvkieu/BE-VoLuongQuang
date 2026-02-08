@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+  <changeSet id="019-add-purchase-order-item-variant" author="codex">
+    <addColumn tableName="purchase_order_item">
+      <column name="product_variant_id" type="varchar(255)"/>
+      <column name="variant_name" type="varchar(100)"/>
+    </addColumn>
+
+    <addForeignKeyConstraint
+      baseTableName="purchase_order_item"
+      baseColumnNames="product_variant_id"
+      referencedTableName="product_variant"
+      referencedColumnNames="product_variant_id"
+      constraintName="fk_purchase_order_item_product_variant"
+      onDelete="SET NULL"/>
+
+    <createIndex indexName="idx_purchase_order_item_product_variant_id" tableName="purchase_order_item">
+      <column name="product_variant_id"/>
+    </createIndex>
+  </changeSet>
+
+</databaseChangeLog>
+

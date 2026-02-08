@@ -1,5 +1,6 @@
 package com.example.be_voluongquang.dto.response.product;
 
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -30,4 +31,5 @@ public class ProductResponseDTO {
     private String categoryId;
     private String brandId;
     private Boolean isDeleted;
+    private List<ProductVariantResponseDTO> productVariants;
 }

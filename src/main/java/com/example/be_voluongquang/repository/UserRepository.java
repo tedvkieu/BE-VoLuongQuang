@@ -40,11 +40,15 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
      * Tìm user theo phone
      */
     Optional<UserEntity> findByPhone(String phone);
+
+    Optional<UserEntity> findByPhoneAndIsDeletedFalse(String phone);
     
     /**
      * Kiểm tra phone đã tồn tại chưa
      */
     boolean existsByPhone(String phone);
+
+    boolean existsByPhoneAndIsDeletedFalse(String phone);
     
     /**
      * Tìm user theo role

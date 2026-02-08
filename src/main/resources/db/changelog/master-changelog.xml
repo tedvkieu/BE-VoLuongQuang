@@ -17,4 +17,5 @@
 	<include file="011-add-contact-status.xml" relativeToChangelogFile="true" />
 	<include file="012-add-featured-image.xml" relativeToChangelogFile="true" />
 	<include file="013-add-purchase-order.xml" relativeToChangelogFile="true" />
+	<include file="014-users-email-nullable.xml" relativeToChangelogFile="true" />
 </databaseChangeLog>

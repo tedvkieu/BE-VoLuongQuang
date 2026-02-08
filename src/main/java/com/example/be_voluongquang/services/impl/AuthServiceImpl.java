@@ -13,6 +13,7 @@ import com.example.be_voluongquang.dto.request.auth.RegisterRequest;
 import com.example.be_voluongquang.dto.response.auth.AuthResponse;
 import com.example.be_voluongquang.entity.UserEntity;
 import com.example.be_voluongquang.exception.InvalidCredentialsException;
+import com.example.be_voluongquang.exception.PhoneAlreadyExistsException;
 import com.example.be_voluongquang.exception.UserAlreadyExistsException;
 import com.example.be_voluongquang.repository.UserRepository;
 import com.example.be_voluongquang.security.JwtUtil;
@@ -32,11 +33,20 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponse login(LoginRequest request) {
+        String rawPhone = normalizePhone(request.getPhone());
         String rawEmail = request.getEmail() == null ? "" : request.getEmail().trim();
         String rawPassword = request.getPassword() == null ? "" : request.getPassword();
 
-        UserEntity user = userRepository.findByEmailIgnoreCaseAndIsDeletedFalse(rawEmail)
-                .orElseThrow(() -> new InvalidCredentialsException("Email không tồn tại trong hệ thống"));
+        UserEntity user;
+        if (StringUtils.hasText(rawPhone)) {
+            user = userRepository.findByPhoneAndIsDeletedFalse(rawPhone)
+                    .orElseThrow(() -> new InvalidCredentialsException("Số điện thoại không tồn tại trong hệ thống"));
+        } else if (StringUtils.hasText(rawEmail)) {
+            user = userRepository.findByEmailIgnoreCaseAndIsDeletedFalse(rawEmail)
+                    .orElseThrow(() -> new InvalidCredentialsException("Email không tồn tại trong hệ thống"));
+        } else {
+            throw new InvalidCredentialsException("Số điện thoại và mật khẩu không được để trống");
+        }
 
         if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
             throw new InvalidCredentialsException("Mật khẩu không chính xác");
@@ -48,7 +58,12 @@ public class AuthServiceImpl implements AuthService {
             role = "CUSTOMER";
         }
         claims.put("role", role);
-        claims.put("email", user.getEmail());
+        if (StringUtils.hasText(user.getEmail())) {
+            claims.put("email", user.getEmail());
+        }
+        if (StringUtils.hasText(user.getPhone())) {
+            claims.put("phone", user.getPhone());
+        }
         if (user.getFullName() != null && !user.getFullName().isBlank()) {
             claims.put("fullName", user.getFullName());
 
@@ -70,17 +85,20 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponse register(RegisterRequest request) {
+        String rawPhone = normalizePhone(request.getPhone());
         String rawEmail = request.getEmail() == null ? "" : request.getEmail().trim();
         String rawPassword = request.getPassword() == null ? "" : request.getPassword();
         String rawFullName = request.getFullName() == null ? "" : request.getFullName().trim();
-        String rawPhone = request.getPhone() == null ? "" : request.getPhone().trim();
         String rawAddress = request.getAddress() == null ? "" : request.getAddress().trim();
 
-        if (!StringUtils.hasText(rawEmail) || !StringUtils.hasText(rawPassword)) {
-            throw new InvalidCredentialsException("Email và mật khẩu không được để trống");
+        if (!StringUtils.hasText(rawPhone) || !StringUtils.hasText(rawPassword)) {
+            throw new InvalidCredentialsException("Số điện thoại và mật khẩu không được để trống");
         }
 
-        if (userRepository.existsByEmailIgnoreCase(rawEmail)) {
+        if (userRepository.existsByPhoneAndIsDeletedFalse(rawPhone)) {
+            throw new PhoneAlreadyExistsException(rawPhone);
+        }
+        if (StringUtils.hasText(rawEmail) && userRepository.existsByEmailIgnoreCaseAndIsDeletedFalse(rawEmail)) {
             throw new UserAlreadyExistsException(rawEmail);
         }
 
@@ -91,10 +109,10 @@ public class AuthServiceImpl implements AuthService {
         role = role.trim().toUpperCase();
 
         UserEntity user = new UserEntity();
-        user.setEmail(rawEmail);
+        user.setEmail(StringUtils.hasText(rawEmail) ? rawEmail : null);
         user.setPassword(passwordEncoder.encode(rawPassword));
-        user.setFullName(StringUtils.hasText(rawFullName) ? rawFullName : rawEmail);
-        user.setPhone(StringUtils.hasText(rawPhone) ? rawPhone : null);
+        user.setFullName(StringUtils.hasText(rawFullName) ? rawFullName : rawPhone);
+        user.setPhone(rawPhone);
         user.setAddress(StringUtils.hasText(rawAddress) ? rawAddress : null);
         user.setRole(role);
 
@@ -102,7 +120,12 @@ public class AuthServiceImpl implements AuthService {
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", role);
-        claims.put("email", saved.getEmail());
+        if (StringUtils.hasText(saved.getEmail())) {
+            claims.put("email", saved.getEmail());
+        }
+        if (StringUtils.hasText(saved.getPhone())) {
+            claims.put("phone", saved.getPhone());
+        }
         if (StringUtils.hasText(saved.getFullName())) {
             claims.put("fullName", saved.getFullName());
         }
@@ -119,5 +142,16 @@ public class AuthServiceImpl implements AuthService {
                 .email(saved.getEmail())
                 .role(role)
                 .build();
+    }
+
+    private String normalizePhone(String phone) {
+        if (!StringUtils.hasText(phone)) {
+            return "";
+        }
+        String digits = phone.trim().replaceAll("[^0-9]", "");
+        if (digits.startsWith("84") && digits.length() == 11) {
+            digits = "0" + digits.substring(2);
+        }
+        return digits;
     }
 }

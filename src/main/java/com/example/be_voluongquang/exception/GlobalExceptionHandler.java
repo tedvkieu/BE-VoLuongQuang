@@ -43,6 +43,25 @@ public class GlobalExceptionHandler {
         }
 
         /**
+         * Xử lý PhoneAlreadyExistsException
+         */
+        @ExceptionHandler(PhoneAlreadyExistsException.class)
+        public ResponseEntity<ErrorResponseDTO> handlePhoneAlreadyExistsException(
+                        PhoneAlreadyExistsException ex,
+                        HttpServletRequest request) {
+
+                log.error("Phone already exists: {}", ex.getMessage());
+
+                ErrorResponseDTO errorResponse = new ErrorResponseDTO(
+                                HttpStatus.CONFLICT.value(),
+                                "Số điện thoại đã tồn tại",
+                                ex.getMessage(),
+                                request.getRequestURI());
+
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+        }
+
+        /**
          * Xử lý InvalidCredentialsException
          */
         @ExceptionHandler(InvalidCredentialsException.class)

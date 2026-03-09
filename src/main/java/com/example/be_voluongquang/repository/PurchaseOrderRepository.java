@@ -32,4 +32,13 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrderEnti
             @Param("status") PurchaseOrderStatus status,
             @Param("isDeleted") Boolean isDeleted,
             Pageable pageable);
+
+    @Query("""
+            SELECT COUNT(po) FROM purchase_order po
+            WHERE (:isDeleted IS NULL OR po.isDeleted = :isDeleted)
+              AND (:status IS NULL OR po.status = :status)
+            """)
+    long countOrders(
+            @Param("status") PurchaseOrderStatus status,
+            @Param("isDeleted") Boolean isDeleted);
 }

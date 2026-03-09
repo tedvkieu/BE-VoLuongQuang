@@ -8,14 +8,10 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Locale;
-import java.util.Set;
-
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -40,6 +36,7 @@ import com.example.be_voluongquang.exception.ResourceNotFoundException;
 import com.example.be_voluongquang.mapper.ProductMapper;
 import com.example.be_voluongquang.repository.BrandRepository;
 import com.example.be_voluongquang.repository.CategoryRepository;
+import com.example.be_voluongquang.repository.CartItemRepository;
 import com.example.be_voluongquang.repository.FileArchivalRepository;
 import com.example.be_voluongquang.repository.ProductGroupRepository;
 import com.example.be_voluongquang.repository.ProductRepository;
@@ -60,6 +57,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import jakarta.persistence.criteria.Predicate;
+import java.util.HashSet;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -76,6 +75,7 @@ public class ProductServiceImpl implements ProductService {
     private final FileArchivalRepository fileArchivalRepository;
     private final ImageNamingUtil imageNamingUtil;
     private final ProductVariantRepository productVariantRepository;
+    private final CartItemRepository cartItemRepository;
 
     public ProductServiceImpl(ProductRepository productRepository,
             CategoryRepository categoryRepository,
@@ -84,7 +84,8 @@ public class ProductServiceImpl implements ProductService {
             UploadImgImgService uploadImgImgService,
             FileArchivalRepository fileArchivalRepository,
             ImageNamingUtil imageNamingUtil,
-            ProductVariantRepository productVariantRepository) {
+            ProductVariantRepository productVariantRepository,
+            CartItemRepository cartItemRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.brandRepository = brandRepository;
@@ -93,6 +94,7 @@ public class ProductServiceImpl implements ProductService {
         this.fileArchivalRepository = fileArchivalRepository;
         this.imageNamingUtil = imageNamingUtil;
         this.productVariantRepository = productVariantRepository;
+        this.cartItemRepository = cartItemRepository;
     }
 
     // Service Impl for GET Method -----------------------------------------
@@ -120,7 +122,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public List<ProductResponseDTO> getAllProductsDiscount() {
-        return productMapper.toDtoList(productRepository.findTop4ByIsDeletedFalseOrderByDiscountPercentDesc());
+        return productMapper.toDtoList(productRepository.findTop12ByIsDeletedFalseOrderByDiscountPercentDesc());
     }
 
     @Override
@@ -504,20 +506,61 @@ public class ProductServiceImpl implements ProductService {
         }
 
         String productId = product.getProductId();
-        productVariantRepository.deleteByProductProductId(productId);
-
-        if (payload == null || payload.isEmpty()) {
+        if (payload == null) {
+            // Client didn't send productVariants -> do not mutate existing variants.
             return;
         }
 
-        List<ProductVariantEntity> toInsert = new ArrayList<>();
+        List<ProductVariantEntity> existing =
+                productVariantRepository.findByProductProductIdAndIsDeletedFalseOrderBySortOrderAsc(productId);
+        Map<String, ProductVariantEntity> existingById = new HashMap<>();
+        for (ProductVariantEntity v : existing) {
+            if (v != null && StringUtils.hasText(v.getProductVariantId())) {
+                existingById.put(v.getProductVariantId(), v);
+            }
+        }
+
+        if (payload.isEmpty()) {
+            // Explicitly clear variants
+            if (!existing.isEmpty()) {
+                List<String> removedIds = existing.stream()
+                        .map(ProductVariantEntity::getProductVariantId)
+                        .filter(StringUtils::hasText)
+                        .toList();
+                if (!removedIds.isEmpty()) {
+                    cartItemRepository.deleteByProductVariantIds(removedIds);
+                }
+                for (ProductVariantEntity v : existing) {
+                    if (v != null) v.setIsDeleted(true);
+                }
+                productVariantRepository.saveAll(existing);
+            }
+            return;
+        }
+
+        Set<String> incomingIds = new HashSet<>();
+        List<ProductVariantEntity> toSave = new ArrayList<>();
         int fallbackOrder = 0;
         for (ProductVariantRequestDTO item : payload) {
-            if (item == null) continue;
+            if (item == null) {
+                continue;
+            }
+            String rawId = item.getProductVariantId();
+            String variantId = StringUtils.hasText(rawId) ? rawId.trim() : null;
+
             String variantName = item.getVariantName() == null ? "" : item.getVariantName().trim();
-            if (!StringUtils.hasText(variantName)) continue;
+            if (!StringUtils.hasText(variantName)) {
+                // Allow skipping "new empty row" but never allow blanking an existing variant.
+                if (variantId != null) {
+                    throw new IllegalArgumentException("Tên phân loại không hợp lệ");
+                }
+                continue;
+            }
             Double variantPrice = item.getVariantPrice();
             if (variantPrice == null || !Double.isFinite(variantPrice) || variantPrice < 0) {
+                if (variantId != null) {
+                    throw new IllegalArgumentException("Giá phân loại không hợp lệ");
+                }
                 continue;
             }
 
@@ -540,18 +583,65 @@ public class ProductServiceImpl implements ProductService {
             }
             fallbackOrder++;
 
-            toInsert.add(ProductVariantEntity.builder()
-                    .product(product)
-                    .variantName(variantName)
-                    .variantPrice(variantPrice)
-                    .finalPrice(finalPrice)
-                    .stockQuantity(stockQuantity)
-                    .sortOrder(sortOrder)
-                    .build());
+            if (variantId != null) {
+                if (!incomingIds.add(variantId)) {
+                    throw new IllegalArgumentException("Danh sách phân loại bị trùng (productVariantId)");
+                }
+
+                ProductVariantEntity existingVariant = existingById.get(variantId);
+                if (existingVariant == null) {
+                    ProductVariantEntity found = productVariantRepository.findById(variantId)
+                            .orElseThrow(() -> new ResourceNotFoundException("ProductVariant", "productVariantId", variantId));
+                    String ownerProductId =
+                            found.getProduct() != null ? found.getProduct().getProductId() : null;
+                    if (ownerProductId == null || !ownerProductId.equals(productId)) {
+                        throw new IllegalArgumentException("Phân loại sản phẩm không thuộc sản phẩm đã chọn");
+                    }
+                    existingVariant = found;
+                }
+
+                existingVariant.setProduct(product);
+                existingVariant.setVariantName(variantName);
+                existingVariant.setVariantPrice(variantPrice);
+                existingVariant.setFinalPrice(finalPrice);
+                existingVariant.setStockQuantity(stockQuantity);
+                existingVariant.setSortOrder(sortOrder);
+                existingVariant.setIsDeleted(false);
+                toSave.add(existingVariant);
+            } else {
+                toSave.add(ProductVariantEntity.builder()
+                        .product(product)
+                        .variantName(variantName)
+                        .variantPrice(variantPrice)
+                        .finalPrice(finalPrice)
+                        .stockQuantity(stockQuantity)
+                        .sortOrder(sortOrder)
+                        .build());
+            }
         }
 
-        if (!toInsert.isEmpty()) {
-            productVariantRepository.saveAll(toInsert);
+        if (!toSave.isEmpty()) {
+            productVariantRepository.saveAll(toSave);
+        }
+
+        // Soft-delete variants removed from payload; also remove them from carts to avoid stale/unbuyable items.
+        if (!existing.isEmpty()) {
+            List<ProductVariantEntity> removed = new ArrayList<>();
+            List<String> removedIds = new ArrayList<>();
+            for (ProductVariantEntity v : existing) {
+                if (v == null) continue;
+                String existingId = v.getProductVariantId();
+                if (!StringUtils.hasText(existingId)) continue;
+                if (!incomingIds.contains(existingId)) {
+                    v.setIsDeleted(true);
+                    removed.add(v);
+                    removedIds.add(existingId);
+                }
+            }
+            if (!removedIds.isEmpty()) {
+                cartItemRepository.deleteByProductVariantIds(removedIds);
+                productVariantRepository.saveAll(removed);
+            }
         }
     }
 

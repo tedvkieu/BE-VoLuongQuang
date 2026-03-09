@@ -488,4 +488,10 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 .createdAt(entity.getCreatedAt())
                 .build();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countOrders(PurchaseOrderStatus status, Boolean isDeleted) {
+        return purchaseOrderRepository.countOrders(status, isDeleted != null ? isDeleted : Boolean.FALSE);
+    }
 }

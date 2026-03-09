@@ -5,6 +5,7 @@ import com.example.be_voluongquang.dto.response.contact.ContactResponseDTO;
 import com.example.be_voluongquang.entity.ContactStatus;
 import com.example.be_voluongquang.services.ContactService;
 import jakarta.validation.Valid;
+import java.util.Map;
 import java.util.List;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +35,14 @@ public class AdminContactController {
         return contactService.getContacts(status);
     }
 
+    @GetMapping("/count")
+    public Map<String, Long> countContacts(
+            @RequestParam(name = "status", required = false) ContactStatus status,
+            @RequestParam(name = "isDeleted", required = false) Boolean isDeleted) {
+        long count = contactService.countContacts(status, isDeleted);
+        return Map.of("count", count);
+    }
+
     @PatchMapping("/{id}/status")
     public ResponseEntity<ContactResponseDTO> updateStatus(
             @PathVariable("id") String id,
@@ -41,4 +50,3 @@ public class AdminContactController {
         return ResponseEntity.ok(contactService.updateContactStatus(id, request.getStatus()));
     }
 }
-

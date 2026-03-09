@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+  <changeSet id="021-cart-item-variant-fk-cascade" author="codex">
+    <sql>
+      -- When a variant is deleted, cart items referencing it should be removed (not converted to NULL),
+      -- otherwise the unique index using COALESCE(product_variant_id,'') can be violated.
+      ALTER TABLE cart_items DROP CONSTRAINT IF EXISTS fk_cart_items_product_variant;
+      ALTER TABLE cart_items
+        ADD CONSTRAINT fk_cart_items_product_variant
+        FOREIGN KEY (product_variant_id)
+        REFERENCES product_variant(product_variant_id)
+        ON DELETE CASCADE;
+    </sql>
+  </changeSet>
+</databaseChangeLog>
+

@@ -130,4 +130,11 @@ public interface CartItemRepository extends JpaRepository<CartItemEntity, Long> 
             WHERE ci.cartId = :cartId
             """)
     List<CartItemEntity> findCartItemsWithProductDetails(@Param("cartId") Integer cartId);
+
+    @Modifying
+    @Query("""
+            DELETE FROM cart_items ci
+            WHERE ci.productVariantId IN :variantIds
+            """)
+    int deleteByProductVariantIds(@Param("variantIds") List<String> variantIds);
 } 

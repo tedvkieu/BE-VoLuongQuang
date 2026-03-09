@@ -11,4 +11,6 @@ public interface ContactService {
     List<ContactResponseDTO> getContacts(ContactStatus status);
 
     ContactResponseDTO updateContactStatus(String contactId, ContactStatus status);
+
+    long countContacts(ContactStatus status, Boolean isDeleted);
 }

@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping(path = "/api/admin/purchase-order", produces = MediaType.APPLICATION_JSON_VALUE)
 @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
@@ -41,6 +43,14 @@ public class AdminPurchaseOrderController {
         int safePage = page != null && page >= 0 ? page : 0;
         int safeSize = size != null && size > 0 ? size : 10;
         return purchaseOrderService.getOrdersPage(safePage, safeSize, search, status, isDeleted);
+    }
+
+    @GetMapping("/count")
+    public Map<String, Long> countOrders(
+            @RequestParam(required = false) PurchaseOrderStatus status,
+            @RequestParam(required = false) Boolean isDeleted) {
+        long count = purchaseOrderService.countOrders(status, isDeleted);
+        return Map.of("count", count);
     }
 
     @GetMapping("/{id}")

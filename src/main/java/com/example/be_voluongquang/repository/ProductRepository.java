@@ -257,6 +257,6 @@ public interface ProductRepository extends JpaRepository<ProductEntity, String>,
 
     List<ProductEntity> findByIsDeletedFalse();
     List<ProductEntity> findAllByIsFeaturedAndIsDeletedFalse(boolean isFeatured);
-    List<ProductEntity> findTop4ByIsDeletedFalseOrderByDiscountPercentDesc();
+    List<ProductEntity> findTop12ByIsDeletedFalseOrderByDiscountPercentDesc();
     Page<ProductEntity> findByDiscountPercentGreaterThanAndIsDeletedFalse(Integer discountPercent, Pageable pageable);
 }

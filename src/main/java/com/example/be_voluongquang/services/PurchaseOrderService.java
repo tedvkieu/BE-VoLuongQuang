@@ -23,4 +23,6 @@ public interface PurchaseOrderService {
     PurchaseOrderResponseDTO updateOrderStatus(String id, PurchaseOrderStatusUpdateRequestDTO request);
 
     PurchaseOrderResponseDTO updateOrder(String id, PurchaseOrderUpdateRequestDTO request);
+
+    long countOrders(PurchaseOrderStatus status, Boolean isDeleted);
 }

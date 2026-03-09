@@ -66,6 +66,11 @@ public class ContactServiceImpl implements ContactService {
         return toResponse(contactRepository.save(entity));
     }
 
+    @Override
+    public long countContacts(ContactStatus status, Boolean isDeleted) {
+        return contactRepository.countContacts(status, isDeleted != null ? isDeleted : Boolean.FALSE);
+    }
+
     private ContactResponseDTO toResponse(ContactEntity entity) {
         return ContactResponseDTO.builder()
                 .contactId(entity.getContactId())

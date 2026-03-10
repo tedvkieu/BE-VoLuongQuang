@@ -13,6 +13,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Notify Telegram (start)
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          message: |
+            🚀 *Backend đang deploy...*
+            📦 Repo: `${{ github.repository }}`
+            🌿 Branch: `${{ github.ref_name }}`
+            👤 By: `${{ github.actor }}`
+            💬 Commit: ${{ github.event.head_commit.message }}
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:

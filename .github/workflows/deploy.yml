@@ -37,3 +37,30 @@ jobs:
             docker compose pull vlq-api
             docker compose up -d vlq-api
             docker image prune -f
+
+      - name: Notify Telegram (success)
+        if: success()
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          message: |
+            ✅ *Backend deploy thành công!*
+            📦 Repo: `${{ github.repository }}`
+            🌿 Branch: `${{ github.ref_name }}`
+            👤 By: `${{ github.actor }}`
+            💬 Commit: ${{ github.event.head_commit.message }}
+
+      - name: Notify Telegram (failure)
+        if: failure()
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          message: |
+            ❌ *Backend deploy THẤT BẠI!*
+            📦 Repo: `${{ github.repository }}`
+            🌿 Branch: `${{ github.ref_name }}`
+            👤 By: `${{ github.actor }}`
+            💬 Commit: ${{ github.event.head_commit.message }}
+            🔗 Chi tiết: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

@@ -8,7 +8,7 @@ public class BeVoluongquangApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(BeVoluongquangApplication.class, args);
-		System.out.println("hello world");
+		System.out.println("hello world 1 test");
 	}
 
 }

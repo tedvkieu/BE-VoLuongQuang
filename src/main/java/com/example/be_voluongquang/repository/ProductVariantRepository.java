@@ -12,6 +12,13 @@ import org.springframework.stereotype.Repository;
 public interface ProductVariantRepository extends JpaRepository<ProductVariantEntity, String> {
     List<ProductVariantEntity> findByProductProductIdAndIsDeletedFalseOrderBySortOrderAsc(String productId);
 
+    @Query("""
+            SELECT pv FROM product_variant pv
+            WHERE pv.product.productId IN :productIds
+              AND (pv.isDeleted IS NULL OR pv.isDeleted = false)
+            """)
+    List<ProductVariantEntity> findActiveByProductIds(@Param("productIds") List<String> productIds);
+
     void deleteByProductProductId(String productId);
 
     @Modifying

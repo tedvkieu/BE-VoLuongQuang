@@ -25,6 +25,7 @@ import com.example.be_voluongquang.dto.request.product.ProductRequestDTO;
 import com.example.be_voluongquang.dto.request.product.ProductSearchRequest;
 import com.example.be_voluongquang.dto.request.product.ProductVariantRequestDTO;
 import com.example.be_voluongquang.dto.response.product.ProductResponseDTO;
+import com.example.be_voluongquang.dto.response.product.ProductVariantResponseDTO;
 import com.example.be_voluongquang.entity.BrandEntity;
 import com.example.be_voluongquang.entity.CategoryEntity;
 import com.example.be_voluongquang.entity.ProductEntity;
@@ -59,6 +60,9 @@ import org.springframework.util.StringUtils;
 import jakarta.persistence.criteria.Predicate;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Comparator;
+import java.util.stream.Collectors;
+import org.springframework.data.domain.PageImpl;
 
 @Slf4j
 @Service
@@ -183,7 +187,54 @@ public class ProductServiceImpl implements ProductService {
         Specification<ProductEntity> specification = buildProductSpecification(request);
         Page<ProductEntity> entityPage = productRepository.findAll(specification, pageable);
 
-        return entityPage.map(productMapper::toDTO);
+        List<ProductEntity> entities = entityPage.getContent();
+        if (entities.isEmpty()) {
+            return entityPage.map(productMapper::toDTO);
+        }
+
+        List<String> productIds = entities.stream()
+                .map(ProductEntity::getProductId)
+                .filter(StringUtils::hasText)
+                .toList();
+
+        Map<String, List<ProductVariantResponseDTO>> variantsByProductId = new HashMap<>();
+        if (!productIds.isEmpty()) {
+            productVariantRepository.findActiveByProductIds(productIds).stream()
+                    .filter(v -> v != null && v.getProduct() != null && StringUtils.hasText(v.getProduct().getProductId()))
+                    .collect(Collectors.groupingBy(v -> v.getProduct().getProductId()))
+                    .forEach((pid, variants) -> {
+                        List<ProductVariantResponseDTO> mapped = variants.stream()
+                                .sorted(Comparator.comparing(
+                                        (ProductVariantEntity v) -> v.getSortOrder() == null ? Integer.MAX_VALUE : v.getSortOrder()))
+                                .map(v -> ProductVariantResponseDTO.builder()
+                                        .productVariantId(v.getProductVariantId())
+                                        .variantName(v.getVariantName())
+                                        .variantPrice(v.getVariantPrice())
+                                        .finalPrice(v.getFinalPrice())
+                                        .stockQuantity(v.getStockQuantity())
+                                        .sortOrder(v.getSortOrder())
+                                        .isDeleted(v.getIsDeleted())
+                                        .build())
+                                .toList();
+                        variantsByProductId.put(pid, mapped);
+                    });
+        }
+
+        List<ProductResponseDTO> dtos = entities.stream()
+                .map(entity -> {
+                    ProductResponseDTO dto = productMapper.toDTO(entity);
+                    if (dto != null && StringUtils.hasText(dto.getProductId())) {
+                        List<ProductVariantResponseDTO> variants =
+                                variantsByProductId.get(dto.getProductId());
+                        if (variants != null && !variants.isEmpty()) {
+                            dto.setProductVariants(variants);
+                        }
+                    }
+                    return dto;
+                })
+                .toList();
+
+        return new PageImpl<>(dtos, pageable, entityPage.getTotalElements());
     }
 
     @Override
@@ -291,10 +342,10 @@ public class ProductServiceImpl implements ProductService {
             }
 
             if (minPrice != null) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("price"), minPrice));
+                predicates.add(cb.greaterThanOrEqualTo(discountedPriceExpression(root, cb), minPrice));
             }
             if (maxPrice != null) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("price"), maxPrice));
+                predicates.add(cb.lessThanOrEqualTo(discountedPriceExpression(root, cb), maxPrice));
             }
             if (request.getMinDiscount() != null) {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("discountPercent"), request.getMinDiscount()));
@@ -308,6 +359,21 @@ public class ProductServiceImpl implements ProductService {
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    private jakarta.persistence.criteria.Expression<Double> discountedPriceExpression(
+            jakarta.persistence.criteria.Root<ProductEntity> root,
+            jakarta.persistence.criteria.CriteriaBuilder cb) {
+        jakarta.persistence.criteria.Expression<Double> price =
+                cb.coalesce(root.get("price"), 0.0);
+        jakarta.persistence.criteria.Expression<Integer> discount =
+                cb.coalesce(root.get("discountPercent"), 0);
+        jakarta.persistence.criteria.Expression<Double> discountAsDouble = cb.toDouble(discount);
+        jakarta.persistence.criteria.Expression<Double> numerator = cb.toDouble(
+                cb.diff(cb.literal(100.0), discountAsDouble));
+        jakarta.persistence.criteria.Expression<Double> factor = cb.toDouble(
+                cb.quot(numerator, cb.literal(100.0)));
+        return cb.toDouble(cb.prod(price, factor));
     }
 
     // Service Impl for POST Method -----------------------------------------

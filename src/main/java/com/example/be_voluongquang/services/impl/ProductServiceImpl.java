@@ -122,7 +122,9 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public List<ProductResponseDTO> getAllProductsDiscount() {
-        return productMapper.toDtoList(productRepository.findTop12ByIsDeletedFalseOrderByDiscountPercentDesc());
+        return productMapper.toDtoList(
+                productRepository.findTop4ByIsDeletedFalseAndIsFsaleTrueAndDiscountPercentGreaterThanOrderByDiscountPercentDesc(
+                        0));
     }
 
     @Override
@@ -159,10 +161,24 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    public Page<ProductResponseDTO> getFlashSaleDiscountProductsPaged(int page, int size, String search) {
+        int safePage = Math.max(0, page);
+        int safeSize = size <= 0 ? 15 : size;
+        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "discountPercent"));
+
+        String processedSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+        Page<ProductEntity> entityPage = processedSearch != null
+                ? productRepository.searchFlashSaleDiscountedProducts(0, processedSearch, pageable)
+                : productRepository.findByIsDeletedFalseAndIsFsaleTrueAndDiscountPercentGreaterThan(0, pageable);
+
+        return entityPage.map(productMapper::toDTO);
+    }
+
+    @Override
     public Page<ProductResponseDTO> searchProducts(ProductSearchRequest request) {
         int safePage = request.getPage() != null ? Math.max(0, request.getPage()) : 0;
         int safeSize = (request.getSize() != null && request.getSize() > 0) ? request.getSize() : 15;
-        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "updatedAt"));
+        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.ASC, "productId"));
 
         Specification<ProductEntity> specification = buildProductSpecification(request);
         Page<ProductEntity> entityPage = productRepository.findAll(specification, pageable);
@@ -481,6 +497,7 @@ public class ProductServiceImpl implements ProductService {
         updatedProduct.setProductId(id); // Đảm bảo giữ nguyên ID
         updatedProduct.setCreatedAt(existingProduct.getCreatedAt()); // Giữ nguyên thời gian tạo
         updatedProduct.setIsDeleted(existingProduct.getIsDeleted()); // Giữ nguyên trạng thái xoá
+        updatedProduct.setIsFsale(existingProduct.getIsFsale()); // Giữ nguyên trạng thái flash sale
         if (updatedProduct.getUrlShopee() == null) {
             updatedProduct.setUrlShopee(existingProduct.getUrlShopee());
         }
@@ -664,6 +681,16 @@ public class ProductServiceImpl implements ProductService {
         existingProduct.setDiscountPercent(sanitized);
         ProductEntity saved = productRepository.save(existingProduct);
         productVariantRepository.recomputeFinalPriceForProduct(id, sanitized);
+        return productMapper.toDTO(saved);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponseDTO updateFsale(String id, boolean isFsale) {
+        ProductEntity existingProduct = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", id));
+        existingProduct.setIsFsale(isFsale);
+        ProductEntity saved = productRepository.save(existingProduct);
         return productMapper.toDTO(saved);
     }
 

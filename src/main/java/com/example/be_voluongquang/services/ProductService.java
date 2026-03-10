@@ -31,6 +31,11 @@ public interface ProductService {
     Page<ProductResponseDTO> getDiscountProductsPaged(int page, int size, String search);
 
     /**
+     * Lấy danh sách product Flash Sale (isFsale = true) và có discount (>0) theo trang + tìm kiếm.
+     */
+    Page<ProductResponseDTO> getFlashSaleDiscountProductsPaged(int page, int size, String search);
+
+    /**
      * Lấy danh sách product hỗ trợ phân trang + lọc + tìm kiếm trong một API POST.
      */
     Page<ProductResponseDTO> searchProducts(ProductSearchRequest request);
@@ -51,6 +56,8 @@ public interface ProductService {
     ProductResponseDTO updateFeatured(String id, boolean isFeatured);
 
     ProductResponseDTO updateDiscount(String id, Integer discountPercent);
+
+    ProductResponseDTO updateFsale(String id, boolean isFsale);
 
     // Service for DELETE method ----------------------------------
     ProductResponseDTO deleteAProduct(String id);

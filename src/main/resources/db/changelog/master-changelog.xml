@@ -24,4 +24,5 @@
 	<include file="019-add-purchase-order-item-variant.xml" relativeToChangelogFile="true" />
 	<include file="020-add-cart-item-variant.xml" relativeToChangelogFile="true" />
 	<include file="021-cart-item-variant-fk-cascade.xml" relativeToChangelogFile="true" />
+	<include file="022-add-product-is-fsale.xml" relativeToChangelogFile="true" />
 </databaseChangeLog>

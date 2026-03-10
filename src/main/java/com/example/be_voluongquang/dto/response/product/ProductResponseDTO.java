@@ -21,6 +21,7 @@ public class ProductResponseDTO {
     private Double weight;
     private String unit;
     private Boolean isFeatured;
+    private Boolean isFsale;
     private Boolean isActive;
     private String imageUrl;
     private String urlShopee;

@@ -121,6 +121,14 @@ public class AdminProductController {
         return ResponseEntity.ok(productService.getDiscountProductsPaged(page, size, search));
     }
 
+    @GetMapping("/fsale-discount-manage")
+    public ResponseEntity<Page<ProductResponseDTO>> getFlashSaleDiscountProductsManage(
+            @RequestParam(name = "page", required = false, defaultValue = "0") Integer page,
+            @RequestParam(name = "size", required = false, defaultValue = "15") Integer size,
+            @RequestParam(name = "search", required = false) String search) {
+        return ResponseEntity.ok(productService.getFlashSaleDiscountProductsPaged(page, size, search));
+    }
+
     @GetMapping("/brands")
     public List<BrandSimpleDTO> getAllBrands() {
         return brandService.getAllBrands();
@@ -185,6 +193,14 @@ public class AdminProductController {
         ProductResponseDTO updated = productService.updateDiscount(id, request.discountPercent());
         return ResponseEntity.ok(updated);
     }
+
+    @PatchMapping(path = "/{id}/fsale")
+    public ResponseEntity<ProductResponseDTO> updateFsale(
+            @PathVariable String id,
+            @RequestBody FsaleToggleRequest request) {
+        ProductResponseDTO updated = productService.updateFsale(id, request.isFsale());
+        return ResponseEntity.ok(updated);
+    }
     
     @PatchMapping(path = "/{id}/restore")
     public ResponseEntity<ProductResponseDTO> restoreProduct(@PathVariable String id) {
@@ -209,6 +225,9 @@ public class AdminProductController {
     }
 
     public record DiscountUpdateRequest(Integer discountPercent) {
+    }
+
+    public record FsaleToggleRequest(boolean isFsale) {
     }
 
     private List<String> firstNonEmpty(List<String> primary, List<String> fallback) {

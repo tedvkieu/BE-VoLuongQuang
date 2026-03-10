@@ -202,6 +202,23 @@ public interface ProductRepository extends JpaRepository<ProductEntity, String>,
     Page<ProductEntity> searchDiscountedProducts(@Param("minDiscount") Integer minDiscount,
             @Param("searchTerm") String searchTerm,
             Pageable pageable);
+
+    /**
+     * Tìm product Flash Sale (isFsale = true) + discountPercent > minDiscount + hỗ trợ tìm kiếm.
+     */
+    @Query("SELECT p FROM product p " +
+            "WHERE p.isFsale = true " +
+            "AND p.discountPercent > :minDiscount " +
+            "AND p.isDeleted = false " +
+            "AND ( :searchTerm IS NULL " +
+            "       OR LOWER(p.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) )")
+    Page<ProductEntity> searchFlashSaleDiscountedProducts(@Param("minDiscount") Integer minDiscount,
+            @Param("searchTerm") String searchTerm,
+            Pageable pageable);
+
+    Page<ProductEntity> findByIsDeletedFalseAndIsFsaleTrueAndDiscountPercentGreaterThan(
+            Integer discountPercent,
+            Pageable pageable);
     
     /**
      * Đếm số lượng product theo brand
@@ -258,5 +275,7 @@ public interface ProductRepository extends JpaRepository<ProductEntity, String>,
     List<ProductEntity> findByIsDeletedFalse();
     List<ProductEntity> findAllByIsFeaturedAndIsDeletedFalse(boolean isFeatured);
     List<ProductEntity> findTop12ByIsDeletedFalseOrderByDiscountPercentDesc();
+    List<ProductEntity> findTop4ByIsDeletedFalseAndIsFsaleTrueAndDiscountPercentGreaterThanOrderByDiscountPercentDesc(
+            Integer discountPercent);
     Page<ProductEntity> findByDiscountPercentGreaterThanAndIsDeletedFalse(Integer discountPercent, Pageable pageable);
 }

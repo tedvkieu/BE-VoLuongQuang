@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet id="022-add-product-is-fsale" author="codex">
+        <addColumn tableName="product">
+            <column name="is_fsale" type="BOOLEAN">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <update tableName="product">
+            <column name="is_fsale" valueBoolean="false"/>
+            <where>is_fsale IS NULL</where>
+        </update>
+
+        <addNotNullConstraint tableName="product" columnName="is_fsale" columnDataType="BOOLEAN"/>
+        <addDefaultValue tableName="product" columnName="is_fsale" defaultValueBoolean="false"/>
+    </changeSet>
+
+</databaseChangeLog>
+

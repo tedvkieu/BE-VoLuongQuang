@@ -52,6 +52,10 @@ public class ProductEntity extends BaseEntity {
     @Column(name = "is_featured")
     private Boolean isFeatured;
 
+    @Column(name = "is_fsale")
+    @Builder.Default
+    private Boolean isFsale = false;
+
     @Column(name = "is_active")
     private Boolean isActive;
 

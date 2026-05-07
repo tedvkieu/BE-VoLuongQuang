@@ -1,8 +1,8 @@
 package com.example.be_voluongquang.dto.request.contact;
 
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,22 +15,18 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ContactRequestDTO {
 
-    @Email(message = "Email is invalid")
+    @Email(message = "Email không hợp lệ")
+    @Size(max = 254, message = "Email không được vượt quá 254 ký tự")
     private String email;
 
-    @Size(max = 30, message = "Phone must be at most 30 characters")
+    @NotBlank(message = "Số điện thoại là bắt buộc")
+    @Pattern(
+        regexp = "^(\\+84|0)[35789][0-9]{8}$",
+        message = "Số điện thoại không hợp lệ (VD: 0912345678 hoặc +84912345678)"
+    )
     private String phone;
 
-    @NotBlank(message = "Message is required")
-    @Size(max = 4000, message = "Message must be at most 4000 characters")
+    @NotBlank(message = "Nội dung liên hệ là bắt buộc")
+    @Size(max = 4000, message = "Nội dung không được vượt quá 4000 ký tự")
     private String message;
-
-    @AssertTrue(message = "Email hoặc số điện thoại là bắt buộc")
-    public boolean isEmailOrPhoneProvided() {
-        return hasText(email) || hasText(phone);
-    }
-
-    private boolean hasText(String value) {
-        return value != null && !value.trim().isEmpty();
-    }
 }

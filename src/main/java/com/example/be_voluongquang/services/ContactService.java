@@ -13,4 +13,6 @@ public interface ContactService {
     ContactResponseDTO updateContactStatus(String contactId, ContactStatus status);
 
     long countContacts(ContactStatus status, Boolean isDeleted);
+
+    void deleteContact(String contactId);
 }

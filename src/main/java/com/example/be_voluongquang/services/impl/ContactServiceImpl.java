@@ -71,6 +71,15 @@ public class ContactServiceImpl implements ContactService {
         return contactRepository.countContacts(status, isDeleted != null ? isDeleted : Boolean.FALSE);
     }
 
+    @Override
+    @Transactional
+    public void deleteContact(String contactId) {
+        ContactEntity entity = contactRepository.findById(contactId)
+                .orElseThrow(() -> new ResourceNotFoundException(CONTACT_LABEL, "contactId", contactId));
+        entity.setIsDeleted(true);
+        contactRepository.save(entity);
+    }
+
     private ContactResponseDTO toResponse(ContactEntity entity) {
         return ContactResponseDTO.builder()
                 .contactId(entity.getContactId())
